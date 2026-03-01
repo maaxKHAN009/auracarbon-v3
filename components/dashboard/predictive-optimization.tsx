@@ -24,7 +24,7 @@ interface AISuggestion {
 }
 
 export function PredictiveOptimization() {
-  const { rows, factors, country, isLoading } = useCarbonStore();
+  const { rows, factors, country, isLoading, totalProductOutput } = useCarbonStore();
   const [trajectoryData, setTrajectoryData] = useState<TrajectoryPoint[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
@@ -83,7 +83,7 @@ export function PredictiveOptimization() {
         emissionsData.scope1 || 0,
         emissionsData.scope2 || 0,
         emissionsData.scope3 || 0,
-        rows[0]?.productOutput || 1
+        totalProductOutput || 1
       );
 
       setAiSuggestions(suggestions);
