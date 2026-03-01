@@ -32,13 +32,13 @@ export function PredictiveOptimization() {
   // Memoize calculations to prevent unnecessary recalculations
   const emissionsData = useMemo(() => {
     if (!factors || rows.length === 0) {
-      return { total: 0 };
+      return { total: 0, scope1: 0, scope2: 0, scope3: 0 };
     }
     try {
       return calculateTotalEmissions(rows, factors, country);
     } catch (error) {
       console.error('Error calculating emissions:', error);
-      return { total: 0 };
+      return { total: 0, scope1: 0, scope2: 0, scope3: 0 };
     }
   }, [rows, factors, country]);
 
