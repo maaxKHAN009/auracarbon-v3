@@ -1,6 +1,6 @@
 /**
  * Email Verification Service
- * Handles email verification for new accounts
+ * Handles email verification for new accounts using Resend Batch API
  */
 
 import { Resend } from 'resend';
@@ -13,6 +13,28 @@ interface VerificationEmailData {
   verificationCode: string;
 }
 
+interface EmailMessage {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+}
+
+/**
+ * Send batch emails using Resend Batch API
+ */
+async function sendBatchEmails(emails: EmailMessage[]) {
+  try {
+    if (emails.length === 0) return { data: [], error: null };
+
+    const result = await resend.batch.send(emails);
+    return result;
+  } catch (error) {
+    console.error('Error sending batch emails:', error);
+    throw error;
+  }
+}
+
 /**
  * Send verification email to user
  */
@@ -20,7 +42,7 @@ export async function sendVerificationEmail(data: VerificationEmailData) {
   try {
     const verificationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/verify-email?code=${data.verificationCode}`;
 
-    const result = await resend.emails.send({
+    const email: EmailMessage = {
       from: 'onboarding@resend.dev',
       to: data.userEmail,
       subject: 'Verify Your AuraCarbon Email 🔐',
@@ -49,8 +71,9 @@ export async function sendVerificationEmail(data: VerificationEmailData) {
           <p style="color: #999; font-size: 12px;">This link will expire in 24 hours.</p>
         </div>
       `,
-    });
+    };
 
+    const result = await sendBatchEmails([email]);
     return result;
   } catch (error) {
     console.error('Error sending verification email:', error);
@@ -65,7 +88,7 @@ export async function sendPasswordResetEmail(userEmail: string, resetCode: strin
   try {
     const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?code=${resetCode}`;
 
-    const result = await resend.emails.send({
+    const email: EmailMessage = {
       from: 'onboarding@resend.dev',
       to: userEmail,
       subject: 'Reset Your AuraCarbon Password 🔑',
@@ -86,8 +109,9 @@ export async function sendPasswordResetEmail(userEmail: string, resetCode: strin
           <p style="color: #999; font-size: 12px;">This link will expire in 1 hour. If you didn't request this, you can ignore this email.</p>
         </div>
       `,
-    });
+    };
 
+    const result = await sendBatchEmails([email]);
     return result;
   } catch (error) {
     console.error('Error sending password reset email:', error);
@@ -100,7 +124,7 @@ export async function sendPasswordResetEmail(userEmail: string, resetCode: strin
  */
 export async function send2FACode(userEmail: string, code: string, userName: string) {
   try {
-    const result = await resend.emails.send({
+    const email: EmailMessage = {
       from: 'onboarding@resend.dev',
       to: userEmail,
       subject: 'Your AuraCarbon 2FA Code 🔐',
@@ -123,8 +147,9 @@ export async function send2FACode(userEmail: string, code: string, userName: str
           <p>If you didn't request this code, please ignore this email and your account will remain secure.</p>
         </div>
       `,
-    });
+    };
 
+    const result = await sendBatchEmails([email]);
     return result;
   } catch (error) {
     console.error('Error sending 2FA code:', error);

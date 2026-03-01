@@ -1,6 +1,6 @@
 /**
- * Email service using Resend
- * Sends registration confirmation and admin notifications
+ * Email service using Resend Batch API
+ * Sends registration confirmation and admin notifications using batch sending
  */
 
 import { Resend } from 'resend';
@@ -17,12 +17,35 @@ interface RegistrationEmailData {
   country: string;
 }
 
+interface EmailMessage {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+}
+
+/**
+ * Send batch emails using Resend Batch API
+ */
+async function sendBatchEmails(emails: EmailMessage[]) {
+  try {
+    if (emails.length === 0) return { data: [], error: null };
+
+    // Use batch API for multiple emails
+    const result = await resend.batch.send(emails);
+    return result;
+  } catch (error) {
+    console.error('Error sending batch emails:', error);
+    throw error;
+  }
+}
+
 /**
  * Send registration confirmation to user
  */
 export async function sendRegistrationConfirmationEmail(data: RegistrationEmailData) {
   try {
-    const result = await resend.emails.send({
+    const email: EmailMessage = {
       from: 'onboarding@resend.dev',
       to: data.userEmail,
       subject: 'AuraCarbon Registration Received ✨',
@@ -48,8 +71,9 @@ export async function sendRegistrationConfirmationEmail(data: RegistrationEmailD
           <p>Best regards,<br/>The AuraCarbon Team</p>
         </div>
       `,
-    });
+    };
 
+    const result = await sendBatchEmails([email]);
     return result;
   } catch (error) {
     console.error('Error sending registration confirmation:', error);
@@ -64,7 +88,7 @@ export async function sendAdminNotificationEmail(data: RegistrationEmailData, re
   try {
     const approvalUrl = `${process.env.APP_URL || 'http://localhost:3000'}/admin/approvals?id=${registrationId}`;
 
-    const result = await resend.emails.send({
+    const email: EmailMessage = {
       from: 'onboarding@resend.dev',
       to: adminEmail,
       subject: `New AuraCarbon Registration: ${data.companyName}`,
@@ -90,8 +114,9 @@ export async function sendAdminNotificationEmail(data: RegistrationEmailData, re
           <p>You can also log in to the admin panel to manage registrations.</p>
         </div>
       `,
-    });
+    };
 
+    const result = await sendBatchEmails([email]);
     return result;
   } catch (error) {
     console.error('Error sending admin notification:', error);
@@ -108,7 +133,7 @@ export async function sendApprovalConfirmationEmail(
   tempPassword: string
 ) {
   try {
-    const result = await resend.emails.send({
+    const email: EmailMessage = {
       from: 'onboarding@resend.dev',
       to: userEmail,
       subject: 'Your AuraCarbon Account is Approved! 🎉',
@@ -137,8 +162,9 @@ export async function sendApprovalConfirmationEmail(
           <p>Welcome to AuraCarbon! 🌱</p>
         </div>
       `,
-    });
+    };
 
+    const result = await sendBatchEmails([email]);
     return result;
   } catch (error) {
     console.error('Error sending approval email:', error);
@@ -151,7 +177,7 @@ export async function sendApprovalConfirmationEmail(
  */
 export async function sendRejectionEmail(userEmail: string, companyName: string, reason?: string) {
   try {
-    const result = await resend.emails.send({
+    const email: EmailMessage = {
       from: 'onboarding@resend.dev',
       to: userEmail,
       subject: 'AuraCarbon Registration Status Update',
@@ -170,8 +196,9 @@ export async function sendRejectionEmail(userEmail: string, companyName: string,
           <p>Best regards,<br/>The AuraCarbon Team</p>
         </div>
       `,
-    });
+    };
 
+    const result = await sendBatchEmails([email]);
     return result;
   } catch (error) {
     console.error('Error sending rejection email:', error);
