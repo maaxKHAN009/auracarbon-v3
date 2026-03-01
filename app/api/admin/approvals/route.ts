@@ -48,9 +48,9 @@ export async function POST(request: NextRequest) {
       // Approve registration
       const result = await approveRegistration(registrationId, adminUserId || 'system');
 
-      // Send approval email
+      // Send approval email (user already has password from registration)
       try {
-        await sendApprovalConfirmationEmail(result.email, result.user.company_name, result.tempPassword);
+        await sendApprovalConfirmationEmail(result.email, result.user.company_name);
       } catch (emailError) {
         console.error('Error sending approval email:', emailError);
       }
@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
           success: true,
           message: 'Registration approved',
           user: result.user,
-          tempPassword: result.tempPassword,
         },
         { status: 200 }
       );

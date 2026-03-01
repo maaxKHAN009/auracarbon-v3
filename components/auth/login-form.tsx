@@ -38,6 +38,10 @@ export function LoginForm({ onLogin, onSwitchToRegister, onAdminSetup }: LoginFo
       const data = await response.json();
 
       if (!response.ok) {
+        // Special handling for pending approval
+        if (data.error === 'PENDING_APPROVAL') {
+          throw new Error('Your account is pending admin approval. You will be able to login once approved. Check your email for updates.');
+        }
         throw new Error(data.error || 'Login failed');
       }
 

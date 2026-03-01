@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertCircle, CheckCircle, Loader } from 'lucide-react';
-import EmailVerificationForm from './email-verification-form';
+import { useRouter } from 'next/navigation';
+import { AlertCircle, Loader } from 'lucide-react';
 
 interface RegistrationFormProps {
   onRegistrationComplete?: () => void;
@@ -40,6 +40,7 @@ const FACILITY_TYPES = [
 ];
 
 export function RegistrationForm({ onRegistrationComplete, onSwitchToLogin }: RegistrationFormProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
@@ -53,10 +54,6 @@ export function RegistrationForm({ onRegistrationComplete, onSwitchToLogin }: Re
 
   const [errors, setErrors] = useState<FormError[]>([]);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [showVerification, setShowVerification] = useState(false);
-  const [registrationId, setRegistrationId] = useState('');
 
   const validateForm = (): boolean => {
     const newErrors: FormError[] = [];
@@ -124,19 +121,8 @@ export function RegistrationForm({ onRegistrationComplete, onSwitchToLogin }: Re
         throw new Error(data.error || 'Registration failed');
       }
 
-      setSuccessMessage(data.message || 'Registration successful! Please verify your email.');
-      setRegistrationId(data.registrationId);
-      setShowVerification(true);
-      setFormData({
-        email: '',
-        password: '',
-        confirmPassword: '',
-        companyName: '',
-        facilityType: '',
-        country: '',
-        phone: '',
-        message: '',
-      });
+      // Navigate to pending approval page
+      router.push(`/pending-approval?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
       setErrors([
         {
@@ -151,55 +137,6 @@ export function RegistrationForm({ onRegistrationComplete, onSwitchToLogin }: Re
 
   const submitError = errors.find((e) => e.field === 'submit');
   const fieldError = (fieldName: string) => errors.find((e) => e.field === fieldName)?.message;
-
-  if (showVerification && registrationId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#0a0e1a] via-[#0f1929] to-[#0a0e1a]">
-        <EmailVerificationForm
-          registrationId={registrationId}
-          email={formData.email || "your email"}
-          onSuccess={() => {
-            setSuccess(true);
-            setTimeout(() => {
-              onSwitchToLogin?.();
-            }, 2000);
-          }}
-          onBack={() => {
-            setShowVerification(false);
-            setRegistrationId('');
-          }}
-        />
-      </div>
-    );
-  } 
-
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <div className="text-center">
-            <div className="mb-6 flex justify-center">
-              <div className="w-16 h-16 bg-[#00FF88]/20 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-10 h-10 text-[#00FF88]" />
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Registration Received! 🎉</h2>
-            <p className="text-white/60 mb-6">{successMessage}</p>
-            <p className="text-white/40 text-sm mb-6">
-              We've sent a confirmation email to <strong>{formData.email}</strong>. An administrator will review your
-              request shortly.
-            </p>
-            <button
-              onClick={onSwitchToLogin}
-              className="w-full px-4 py-2 bg-[#00CCFF]/20 text-[#00CCFF] rounded-lg hover:bg-[#00CCFF]/30 transition-colors"
-            >
-              Back to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#0a0e1a] via-[#0f1929] to-[#0a0e1a]">

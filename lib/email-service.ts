@@ -165,8 +165,7 @@ export async function sendAdminNotificationEmail(data: RegistrationEmailData, re
  */
 export async function sendApprovalConfirmationEmail(
   userEmail: string,
-  companyName: string,
-  tempPassword: string
+  companyName: string
 ) {
   try {
     const htmlContent = `
@@ -180,7 +179,7 @@ export async function sendApprovalConfirmationEmail(
         <h3>Login Details:</h3>
         <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <p><strong>Email:</strong> ${userEmail}</p>
-          <p><strong>Temporary Password:</strong> <code style="background: #e0e0e0; padding: 4px 8px; border-radius: 4px;">${tempPassword}</code></p>
+          <p>Use the password you created during registration to log in.</p>
         </div>
         
         <p>
@@ -188,8 +187,6 @@ export async function sendApprovalConfirmationEmail(
             Log in now
           </a>
         </p>
-        
-        <p><strong>Important:</strong> Please change your password immediately after your first login.</p>
         
         <p>Welcome to AuraCarbon! 🌱</p>
       </div>

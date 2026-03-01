@@ -1,10 +1,10 @@
 /**
  * User registration API endpoint
+ * Simplified: No email verification, admin approves directly
  */
 
 import { registerUser } from '@/lib/auth-service';
-import { sendRegistrationConfirmationEmail, sendAdminNotificationEmail } from '@/lib/email-service';
-import { sendVerificationEmail } from '@/lib/email-verification-service';
+import { sendAdminNotificationEmail } from '@/lib/email-service';
 import type { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Register user
+    // Register user (creates pending registration entry)
     const result = await registerUser({
       email,
       password,
@@ -32,62 +32,7 @@ export async function POST(request: NextRequest) {
       message,
     });
 
-    // Get the verification code from the result
-    const fullName = companyName;
-    
-    // Send verification email to user with code
-    try {
-      // Check if RESEND_API_KEY is configured
-      if (!process.env.RESEND_API_KEY) {
-        console.error('RESEND_API_KEY is not configured in environment variables');
-        throw new Error('Email service not configured. Please contact administrator.');
-      }
-
-      // Extract verification code from pending registration (need to fetch it)
-      const { getSupabaseServerClient } = await import('@/lib/supabase-client');
-      const supabase = getSupabaseServerClient();
-      const { data: pendingReg } = await supabase
-        .from('pending_registrations')
-        .select('verification_code')
-        .eq('id', result.registrationId)
-        .single();
-      
-      if (pendingReg?.verification_code) {
-        console.log(`Sending verification email to ${email} with code ${pendingReg.verification_code}`);
-        await sendVerificationEmail({
-          userEmail: email,
-          userName: fullName,
-          verificationCode: pendingReg.verification_code,
-        });
-        console.log(`Verification email sent successfully to ${email}`);
-      }
-    } catch (emailError) {
-      console.error('Error sending verification email:', emailError);
-      // Return error to client for debugging
-      return Response.json(
-        { 
-          error: 'Registration created but email delivery failed',
-          details: emailError instanceof Error ? emailError.message : 'Unknown error',
-          registrationId: result.registrationId
-        },
-        { status: 500 }
-      );
-    }
-
-    // Send confirmation email to user
-    try {
-      await sendRegistrationConfirmationEmail({
-        userEmail: email,
-        companyName,
-        facilityType,
-        country,
-      });
-    } catch (emailError) {
-      console.error('Error sending confirmation email:', emailError);
-      // Don't fail the registration if email fails
-    }
-
-    // Send notification to admin
+    // Send notification to admin about new registration
     try {
       await sendAdminNotificationEmail(
         {
@@ -106,7 +51,7 @@ export async function POST(request: NextRequest) {
     return Response.json(
       {
         success: true,
-        message: 'Registration successful. Please verify your email address.',
+        message: 'Registration successful. Pending admin approval.',
         registrationId: result.registrationId,
       },
       { status: 201 }

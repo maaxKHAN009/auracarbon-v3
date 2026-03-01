@@ -74,20 +74,21 @@ export async function registerUser(data: RegisterData) {
       throw new Error('This email is already pending approval');
     }
 
-    // Create pending registration
-    const verificationCode = generateVerificationCode();
+    // Hash the password before storing
+    const passwordHash = await hashPassword(data.password);
+
+    // Create pending registration (no verification needed, admin approves directly)
     const { data: pendingReg, error } = await supabaseServer
       .from('pending_registrations')
       .insert({
         email: data.email,
+        password_hash: passwordHash,
         company_name: data.companyName,
         facility_type: data.facilityType,
         country: data.country,
         phone: data.phone,
         message: data.message,
         status: 'pending',
-        verification_code: verificationCode,
-        is_verified: false,
       })
       .select()
       .single();
@@ -126,16 +127,12 @@ export async function approveRegistration(registrationId: string, adminUserId: s
       throw new Error('Registration not found');
     }
 
-    // Generate temporary password
-    const tempPassword = generateTempPassword();
-    const hashedPassword = await hashPassword(tempPassword);
-
-    // Create user account
+    // Create user account with password stored during registration
     const { data: newUser, error: insertError } = await supabaseServer
       .from('users')
       .insert({
         email: pendingReg.email,
-        password_hash: hashedPassword,
+        password_hash: pendingReg.password_hash,
         company_name: pendingReg.company_name,
         facility_type: pendingReg.facility_type,
         country: pendingReg.country,
@@ -150,7 +147,23 @@ export async function approveRegistration(registrationId: string, adminUserId: s
       throw insertError;
     }
 
-    // Delete pending registration (no longer needed after approval)
+    // Move registration to history as approved
+    await supabaseServer
+      .from('registration_history')
+      .insert({
+        email: pendingReg.email,
+        company_name: pendingReg.company_name,
+        facility_type: pendingReg.facility_type,
+        country: pendingReg.country,
+        phone: pendingReg.phone,
+        message: pendingReg.message,
+        status: 'approved',
+        user_id: newUser.id,
+        approved_at: new Date().toISOString(),
+        created_at: pendingReg.created_at,
+      });
+
+    // Delete from pending registrations
     await supabaseServer
       .from('pending_registrations')
       .delete()
@@ -159,7 +172,6 @@ export async function approveRegistration(registrationId: string, adminUserId: s
     return {
       success: true,
       user: newUser,
-      tempPassword,
       email: newUser.email,
     };
   } catch (error) {
@@ -175,7 +187,32 @@ export async function rejectRegistration(registrationId: string, reason?: string
   try {
     const supabaseServer = getSupabaseServerClient();
 
-    // Delete pending registration (clear the entry from database)
+    // Get pending registration before deletion
+    const { data: pendingReg } = await supabaseServer
+      .from('pending_registrations')
+      .select('*')
+      .eq('id', registrationId)
+      .single();
+
+    // Move registration to history as rejected
+    if (pendingReg) {
+      await supabaseServer
+        .from('registration_history')
+        .insert({
+          email: pendingReg.email,
+          company_name: pendingReg.company_name,
+          facility_type: pendingReg.facility_type,
+          country: pendingReg.country,
+          phone: pendingReg.phone,
+          message: pendingReg.message,
+          status: 'rejected',
+          rejection_reason: reason,
+          rejected_at: new Date().toISOString(),
+          created_at: pendingReg.created_at,
+        });
+    }
+
+    // Delete pending registration
     const { error } = await supabaseServer
       .from('pending_registrations')
       .delete()
@@ -187,7 +224,7 @@ export async function rejectRegistration(registrationId: string, reason?: string
 
     return {
       success: true,
-      message: 'Registration rejected and deleted',
+      message: 'Registration rejected and moved to history',
     };
   } catch (error) {
     console.error('Rejection error:', error);
@@ -202,7 +239,18 @@ export async function loginUser(data: LoginData) {
   try {
     const supabaseServer = getSupabaseServerClient();
 
-    // Find user by email
+    // Find user by email first checking if pending
+    const { data: pendingReg } = await supabaseServer
+      .from('pending_registrations')
+      .select('*')
+      .eq('email', data.email)
+      .single();
+
+    if (pendingReg) {
+      throw new Error('PENDING_APPROVAL');
+    }
+
+    // Find user by email in users table
     const { data: user, error } = await supabaseServer
       .from('users')
       .select('*')
