@@ -4,6 +4,7 @@
 
 import { loginUser } from '@/lib/auth-service';
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = body;
 
     if (!email || !password) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
       );
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     const result = await loginUser({ email, password });
 
     // Create response with auth cookie
-    const response = Response.json(
+    const response = NextResponse.json(
       {
         success: true,
         user: result.user,
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const errorMessage = error instanceof Error ? error.message : 'Login failed';
 
-    return Response.json(
+    return NextResponse.json(
       { error: errorMessage },
       { status: 401 }
     );
