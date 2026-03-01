@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-aura-dark: #121212;
+  --color-aura-light: #F0F0F0;
+  --color-aura-accent: #00FF88;
+  --color-aura-accent-hover: #00CC6A;
+  --color-aura-danger: #FF3366;
+  --color-aura-warning: #FFCC00;
+  --color-aura-info: #00CCFF;
+}
+
+@layer base {
+  :root {
+    --bg-base: var(--color-aura-light);
+    --text-base: var(--color-aura-dark);
+    --card-bg: rgba(255, 255, 255, 0.7);
+    --card-border: rgba(0, 0, 0, 0.1);
+  }
+
+  .dark {
+    --bg-base: var(--color-aura-dark);
+    --text-base: var(--color-aura-light);
+    --card-bg: rgba(30, 30, 30, 0.6);
+    --card-border: rgba(255, 255, 255, 0.1);
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-base);
+    font-family: var(--font-sans), sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    background-color: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  }
+}

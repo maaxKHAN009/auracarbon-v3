@@ -1,0 +1,24 @@
+{
+  "materials": {
+    "Steel": 1.85,
+    "Aluminum": 16.7,
+    "Cement": 0.89,
+    "Concrete": 0.13,
+    "Glass": 1.25,
+    "Limestone": 0.12
+  },
+  "fuels": {
+    "Natural Gas": 2.02,
+    "Coal": 2.42,
+    "Diesel": 2.68
+  },
+  "grids": {
+    "Pakistan": 0.55,
+    "Germany": 0.38,
+    "USA": 0.39,
+    "China": 0.58,
+    "India": 0.71,
+    "UK": 0.21,
+    "France": 0.06
+  }
+}
