@@ -150,10 +150,10 @@ export async function approveRegistration(registrationId: string, adminUserId: s
       throw insertError;
     }
 
-    // Update pending registration status
+    // Delete pending registration (no longer needed after approval)
     await supabaseServer
       .from('pending_registrations')
-      .update({ status: 'approved' })
+      .delete()
       .eq('id', registrationId);
 
     return {
@@ -175,12 +175,10 @@ export async function rejectRegistration(registrationId: string, reason?: string
   try {
     const supabaseServer = getSupabaseServerClient();
 
-    // Update pending registration status
+    // Delete pending registration (clear the entry from database)
     const { error } = await supabaseServer
       .from('pending_registrations')
-      .update({
-        status: 'rejected',
-      })
+      .delete()
       .eq('id', registrationId);
 
     if (error) {
@@ -189,7 +187,7 @@ export async function rejectRegistration(registrationId: string, reason?: string
 
     return {
       success: true,
-      message: 'Registration rejected',
+      message: 'Registration rejected and deleted',
     };
   } catch (error) {
     console.error('Rejection error:', error);
