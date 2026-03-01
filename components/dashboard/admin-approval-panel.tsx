@@ -55,7 +55,7 @@ export function AdminApprovalPanel() {
         body: JSON.stringify({
           action: 'approve',
           registrationId,
-          adminUserId: 'admin',
+          adminUserId: null,
         }),
       });
 
