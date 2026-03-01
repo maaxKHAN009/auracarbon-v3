@@ -234,7 +234,8 @@ export async function loginUser(data: LoginData) {
         companyName: user.company_name,
         facilityType: user.facility_type,
         country: user.country,
-        isAdmin: user.is_admin || false, // Check is_admin field
+        isAdmin: user.is_admin || false,
+        two_fa_enabled: user.two_fa_enabled || false,
       },
     };
   } catch (error) {
