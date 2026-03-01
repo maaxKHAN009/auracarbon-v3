@@ -12,7 +12,6 @@ interface User {
   country: string;
   status: 'active' | 'inactive';
   is_admin: boolean;
-  email_verified: boolean;
   two_fa_enabled: boolean;
   created_at: string;
 }

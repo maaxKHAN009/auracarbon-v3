@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     // Get all users (admin only - should add auth check in production)
     const { data: users, error } = await supabaseServer
       .from('users')
-      .select('id, email, company_name, facility_type, country, status, is_admin, email_verified, created_at, approved_at, two_fa_enabled')
+      .select('id, email, company_name, facility_type, country, status, is_admin, created_at, approved_at, two_fa_enabled')
       .order('created_at', { ascending: false });
 
     if (error) {
