@@ -47,7 +47,11 @@ export async function POST(request: NextRequest) {
         .single();
       
       if (pendingReg?.verification_code) {
-        await sendVerificationEmail(email, pendingReg.verification_code, fullName);
+        await sendVerificationEmail({
+          userEmail: email,
+          userName: fullName,
+          verificationCode: pendingReg.verification_code,
+        });
       }
     } catch (emailError) {
       console.error('Error sending verification email:', emailError);
