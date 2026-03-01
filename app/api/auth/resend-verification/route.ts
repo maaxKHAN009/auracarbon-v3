@@ -55,13 +55,30 @@ export async function POST(request: NextRequest) {
 
     // Send verification email
     try {
+      if (!process.env.RESEND_API_KEY) {
+        console.error('RESEND_API_KEY is not configured in environment variables');
+        return NextResponse.json(
+          { error: 'Email service not configured. Contact administrator.' },
+          { status: 500 }
+        );
+      }
+
+      console.log(`Resending verification email to ${registration.email} with code ${newCode}`);
       await sendVerificationEmail({
         userEmail: registration.email,
         verificationCode: newCode,
         userName: registration.full_name,
       });
+      console.log(`Verification email resent successfully to ${registration.email}`);
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
+      return NextResponse.json(
+        { 
+          error: 'Failed to send verification email',
+          details: emailError instanceof Error ? emailError.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(

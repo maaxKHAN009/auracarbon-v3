@@ -37,6 +37,12 @@ export async function POST(request: NextRequest) {
     
     // Send verification email to user with code
     try {
+      // Check if RESEND_API_KEY is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error('RESEND_API_KEY is not configured in environment variables');
+        throw new Error('Email service not configured. Please contact administrator.');
+      }
+
       // Extract verification code from pending registration (need to fetch it)
       const { getSupabaseServerClient } = await import('@/lib/supabase-client');
       const supabase = getSupabaseServerClient();
@@ -47,15 +53,25 @@ export async function POST(request: NextRequest) {
         .single();
       
       if (pendingReg?.verification_code) {
+        console.log(`Sending verification email to ${email} with code ${pendingReg.verification_code}`);
         await sendVerificationEmail({
           userEmail: email,
           userName: fullName,
           verificationCode: pendingReg.verification_code,
         });
+        console.log(`Verification email sent successfully to ${email}`);
       }
     } catch (emailError) {
       console.error('Error sending verification email:', emailError);
-      // Don't fail the registration if email fails
+      // Return error to client for debugging
+      return Response.json(
+        { 
+          error: 'Registration created but email delivery failed',
+          details: emailError instanceof Error ? emailError.message : 'Unknown error',
+          registrationId: result.registrationId
+        },
+        { status: 500 }
+      );
     }
 
     // Send confirmation email to user
