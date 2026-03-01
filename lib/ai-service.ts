@@ -2,7 +2,7 @@
  * AI-powered emission reduction suggestions using Google Gemini
  */
 
-import { GoogleGenerativeAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface AIEmissionSuggestion {
   recommendation: string;
