@@ -3,9 +3,10 @@
  */
 
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
-  const response = Response.json(
+  const response = NextResponse.json(
     { success: true, message: 'Logged out successfully' },
     { status: 200 }
   );
