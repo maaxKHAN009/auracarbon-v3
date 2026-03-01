@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'approve') {
       // Approve registration
-      const result = await approveRegistration(registrationId, adminUserId || 'system');
+      const result = await approveRegistration(registrationId, adminUserId || null);
 
       // Send approval email (user already has password from registration)
       try {
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       // Log audit event
       await logAuditEvent({
         action: 'admin_approved_registration',
-        adminId: adminUserId || 'system',
+        adminId: adminUserId || 'admin',  
         targetUserId: result.user.id,
         details: { email: result.email, company: result.user.company_name },
       });

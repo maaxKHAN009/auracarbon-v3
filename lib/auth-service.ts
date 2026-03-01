@@ -112,7 +112,7 @@ export async function registerUser(data: RegisterData) {
 /**
  * Admin: Approve registration
  */
-export async function approveRegistration(registrationId: string, adminUserId: string) {
+export async function approveRegistration(registrationId: string, adminUserId: string | null) {
   try {
     const supabaseServer = getSupabaseServerClient();
 
@@ -138,7 +138,7 @@ export async function approveRegistration(registrationId: string, adminUserId: s
         country: pendingReg.country,
         status: 'active',
         approved_at: new Date().toISOString(),
-        approved_by: adminUserId,
+        approved_by: adminUserId || null,
       })
       .select()
       .single();
