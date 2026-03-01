@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Check if user exists
     const { data: user, error: fetchError } = await supabase
       .from('users')
-      .select('id, email')
+      .select('id, email, company_name')
       .eq('email', email)
       .single();
 
@@ -57,8 +57,7 @@ export async function POST(request: NextRequest) {
 
     // Send password reset email
     try {
-      const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-      await sendPasswordResetEmail(email, resetLink);
+      await sendPasswordResetEmail(email, resetToken, user.company_name);
     } catch (emailError) {
       console.error('Failed to send password reset email:', emailError);
       // Don't fail the request if email fails
