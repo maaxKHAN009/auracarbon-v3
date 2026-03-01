@@ -69,10 +69,14 @@ export function AdminApprovalPanel() {
             registration,
             tempPassword: data.tempPassword,
           });
+          // Show success message
+          alert(`✅ Registration approved!\n\nCompany: ${registration.company_name}\nEmail: ${registration.email}`);
         }
 
         // Remove from list
         setRegistrations((prev) => prev.filter((r) => r.id !== registrationId));
+      } else {
+        alert('❌ ' + (data.error || 'Failed to approve registration'));
       }
     } catch (error) {
       console.error('Error approving registration:', error);
@@ -101,7 +105,13 @@ export function AdminApprovalPanel() {
 
       if (data.success) {
         // Remove from list
+        const rejectedEmail = registrations.find((r) => r.id === registrationId)?.email;
         setRegistrations((prev) => prev.filter((r) => r.id !== registrationId));
+        
+        // Show success message
+        alert(`✅ Registration rejected!\n\nEmail: ${rejectedEmail}`);
+      } else {
+        alert('❌ ' + (data.error || 'Failed to reject registration'));
       }
     } catch (error) {
       console.error('Error rejecting registration:', error);
