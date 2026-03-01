@@ -73,7 +73,7 @@ export function PredictiveOptimization() {
 
     setAiLoading(true);
     try {
-      const materials = [...new Set(rows.map((r) => r.material))];
+      const materials = [...new Set(rows.map((r) => r.materialOrFuel))];
       const processes = [...new Set(rows.map((r) => r.process))];
 
       const suggestions = await getAIEmissionSuggestions(
