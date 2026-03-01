@@ -1,8 +1,7 @@
 /**
  * AI-powered emission reduction suggestions using Google Gemini
+ * This service makes API calls to the server-side suggestions endpoint
  */
-
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface AIEmissionSuggestion {
   recommendation: string;
