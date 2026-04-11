@@ -267,9 +267,19 @@ export async function loginUser(data: LoginData) {
       throw new Error('Account is not active. Please contact administrator.');
     }
 
-    // Verify password
-    const hashedPassword = await hashPassword(data.password);
-    if (hashedPassword !== user.password_hash) {
+    // Verify password - support both old SHA256 and new bcryptjs hashes
+    let passwordValid = false;
+    
+    // Try bcryptjs verification (new hashes start with $2)
+    if (user.password_hash.startsWith('$2')) {
+      passwordValid = await bcrypt.compare(data.password, user.password_hash);
+    } else {
+      // Fall back to SHA256 verification (old hashes)
+      const sha256Hash = crypto.createHash('sha256').update(data.password).digest('hex');
+      passwordValid = sha256Hash === user.password_hash;
+    }
+
+    if (!passwordValid) {
       throw new Error('Invalid email or password');
     }
 
