@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useCarbonStore } from '@/lib/store';
 
 interface EmissionData {
   // Section 1: Emission Overview
@@ -37,7 +38,103 @@ export function EmissionAnalysisForm() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [results, setResults] = useState<any>(null);
+  const { rows, factors, totalProductOutput } = useCarbonStore();
+
+  const handleFetchData = async () => {
+    try {
+      setFetching(true);
+      
+      if (!factors || rows.length === 0) {
+        alert('Please first configure emissions in the Project Configuration card above');
+        return;
+      }
+
+      // Calculate total emissions and scope breakdown
+      let scope1Total = 0; // Direct combustion
+      let scope2Total = 0; // Electrical
+      let scope3Total = 0; // Other
+
+      rows.forEach((row) => {
+        let unitMultiplier = 1;
+        // Convert to kg for consistent calculation
+        switch (row.unit) {
+          case 'Tons':
+            unitMultiplier = 1000000; // Tons to kg
+            break;
+          case 'kg':
+            unitMultiplier = 1;
+            break;
+          case 'm3':
+            unitMultiplier = 1000; // m3 to kg (assuming liquid)
+            break;
+          case 'liter':
+            unitMultiplier = 1;
+            break;
+          case 'kWh':
+            unitMultiplier = 1; // electricity stays as kWh
+            break;
+        }
+
+        const emissionFactor = 
+          factors.materials[row.materialOrFuel] ||
+          factors.fuels[row.materialOrFuel] ||
+          factors.grids[row.materialOrFuel] ||
+          0;
+
+        const emissions = (row.quantity * unitMultiplier * emissionFactor) / 1000; // Convert to kg CO2e
+
+        // Classify by scope based on process type
+        if (row.process === 'Direct Burning') {
+          scope1Total += emissions;
+        } else if (row.process === 'Electrical Grinding') {
+          scope2Total += emissions;
+        } else {
+          scope3Total += emissions;
+        }
+      });
+
+      const totalEmissions = scope1Total + scope2Total + scope3Total;
+
+      // Calculate percentages
+      const scope1Percent = totalEmissions > 0 ? (scope1Total / totalEmissions) * 100 : 0;
+      const scope2Percent = totalEmissions > 0 ? (scope2Total / totalEmissions) * 100 : 0;
+      const scope3Percent = totalEmissions > 0 ? (scope3Total / totalEmissions) * 100 : 0;
+
+      // Extract unique materials and processes from rows
+      const materials = [...new Set(rows.map((r) => r.materialOrFuel))];
+      const processes = [...new Set(rows.map((r) => r.process))];
+
+      // Determine industry type (guess from materials)
+      let industry = 'Manufacturing';
+      const materialStr = materials.join(' ').toLowerCase();
+      if (materialStr.includes('steel') || materialStr.includes('iron')) industry = 'Steel';
+      else if (materialStr.includes('cement') || materialStr.includes('lime')) industry = 'Cement';
+      else if (materialStr.includes('gas')) industry = 'Energy';
+
+      // Update form with fetched data
+      setFormData({
+        totalEmissions: Math.round(totalEmissions),
+        scope1Percent: Math.round(scope1Percent * 100) / 100,
+        scope2Percent: Math.round(scope2Percent * 100) / 100,
+        scope3Percent: Math.round(scope3Percent * 100) / 100,
+        productOutput: totalProductOutput,
+        materials,
+        processes,
+        industry,
+        budget: 'medium',
+        timeline: 'mediumterm',
+      });
+
+      alert('✅ Data loaded successfully! Review and click Generate Recommendations.');
+    } catch (error) {
+      console.error('Fetch error:', error);
+      alert('Failed to fetch data. Please try again.');
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +159,21 @@ export function EmissionAnalysisForm() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
+      {/* Fetch Data Button */}
+      <div className="flex gap-3 mb-6">
+        <button
+          type="button"
+          onClick={handleFetchData}
+          disabled={fetching}
+          className="px-6 py-2 bg-[#00CCFF] hover:bg-[#00CCFF]/80 disabled:opacity-50 text-white font-bold rounded-lg transition"
+        >
+          {fetching ? 'Fetching...' : 'Fetch Data from Above'}
+        </button>
+        <p className="text-sm text-gray-400 flex items-center">
+          Click to auto-populate form with calculated emissions data
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-8">
         
         {/* SECTION 1: Emission Overview */}
