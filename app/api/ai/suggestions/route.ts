@@ -206,8 +206,11 @@ Use this exact structure:
 // ─── Gemini Provider ─────────────────────────────────────────────────────────
 
 async function callGemini(prompt: string): Promise<AIEmissionSuggestion[] | null> {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-  if (!apiKey) return null;
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    console.error('[Gemini] No API key found - set GOOGLE_API_KEY environment variable');
+    return null;
+  }
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
