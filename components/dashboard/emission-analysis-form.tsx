@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useCarbonStore } from '@/lib/store';
+import { RecommendationsChat } from './recommendations-chat';
 
 interface EmissionData {
   // Section 1: Emission Overview
@@ -457,8 +458,19 @@ export function EmissionAnalysisForm() {
       </form>
 
       {/* Results Display */}
-      {results && <EmissionAnalysisResults data={results} />}
-    </div>
+      {results && (
+        <>
+          <EmissionAnalysisResults data={results} />
+          
+          {/* Chat Widget for Follow-up Questions */}
+          <div className="mt-8">
+            <RecommendationsChat 
+              recommendations={results.recommendations || []} 
+              emissionData={formData}
+            />
+          </div>
+        </>
+      )}
   );
 }
 
