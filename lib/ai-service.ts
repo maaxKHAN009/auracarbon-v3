@@ -1,20 +1,60 @@
 /**
- * AI-powered emission reduction suggestions using Google Gemini
- * This service makes API calls to the server-side suggestions endpoint
+ * AI-powered emission reduction suggestions — Client Service
+ * AuraCarbon v3 — Updated lib/ai-service.ts
+ * 
+ * Calls the enhanced /api/ai/suggestions endpoint and returns
+ * typed suggestions + carbon credit projections.
  */
 
-interface AIEmissionSuggestion {
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface AIEmissionSuggestion {
   recommendation: string;
   targetScope: 'Scope 1' | 'Scope 2' | 'Scope 3';
   estimatedReduction: number;
   timelineMonths: number;
   costCategory: 'low' | 'medium' | 'high';
   implementation: string;
+  alternativeProduct?: string;
+  annualCO2Saved?: number;
 }
+
+export interface CarbonCreditProjection {
+  annualReductionTonnes: number;
+  revenueAt10: number;
+  revenueAt30: number;
+  revenueAt50: number;
+  revenueAtMarket: number;
+  marketPriceUsed: number;
+  currency: string;
+}
+
+export interface EmissionSummary {
+  totalKgCO2e: number;
+  totalTonnesCO2e: number;
+  scope1: number;
+  scope2: number;
+  scope3: number;
+  dominantScope: string;
+  intensityPerTon: number;
+}
+
+export interface AISuggestionsResponse {
+  success: boolean;
+  suggestions: AIEmissionSuggestion[];
+  carbonCredits: CarbonCreditProjection;
+  emissionSummary: EmissionSummary;
+  provider: 'gemini' | 'openai' | 'fallback';
+  generatedAt: string;
+}
+
+// ─── Main Function ───────────────────────────────────────────────────────────
 
 /**
  * Generate AI-powered emission reduction recommendations
- * Uses Google Gemini API for analysis
+ * with carbon credit revenue projections.
+ * 
+ * @returns Full response including suggestions, carbon credits, and summary
  */
 export async function getAIEmissionSuggestions(
   materials: string[],
@@ -41,91 +81,60 @@ export async function getAIEmissionSuggestions(
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.status}`);
     }
 
-    const data = await response.json();
-    
-    // If Gemini returns raw text, parse it
-    if (data.suggestions && typeof data.suggestions === 'string') {
-      try {
-        // Try to extract JSON from the response
-        const jsonMatch = data.suggestions.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          return JSON.parse(jsonMatch[0]);
-        }
-      } catch (parseError) {
-        console.warn('Could not parse AI suggestions as JSON, using fallback');
-        return getFallbackSuggestions(scope1, scope2, scope3);
-      }
+    const data: AISuggestionsResponse = await response.json();
+
+    if (!data.success || !data.suggestions) {
+      throw new Error('Invalid response from AI suggestions API');
     }
 
-    return data.suggestions || getFallbackSuggestions(scope1, scope2, scope3);
+    return data.suggestions;
   } catch (error) {
-    console.error('Error fetching AI suggestions:', error);
-    return getFallbackSuggestions(scope1, scope2, scope3);
+    console.error('[AuraCarbon] AI service error:', error);
+    return [];
   }
 }
 
 /**
- * Fallback suggestions when AI is unavailable
+ * Get the FULL AI response including carbon credit projections.
+ * Use this when you need carbon credit data in addition to suggestions.
  */
-function getFallbackSuggestions(
+export async function getFullAISuggestionsResponse(
+  materials: string[],
+  processes: string[],
+  currentEmissions: number,
   scope1: number,
   scope2: number,
-  scope3: number
-): AIEmissionSuggestion[] {
-  const suggestions: AIEmissionSuggestion[] = [];
-
-  // Scope 1 - Direct Combustion
-  if (scope1 > 0) {
-    suggestions.push({
-      recommendation: 'Switch to renewable fuels or biomass for direct burning processes',
-      targetScope: 'Scope 1',
-      estimatedReduction: 55,
-      timelineMonths: 12,
-      costCategory: 'high',
-      implementation:
-        'Replace coal/gas boilers with biomass-fired or hybrid systems. Requires infrastructure investment.',
+  scope3: number,
+  productOutput: number
+): Promise<AISuggestionsResponse | null> {
+  try {
+    const response = await fetch('/api/ai/suggestions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        materials,
+        processes,
+        currentEmissions,
+        scope1,
+        scope2,
+        scope3,
+        productOutput,
+      }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.status}`);
+    }
+
+    const data: AISuggestionsResponse = await response.json();
+    return data.success ? data : null;
+  } catch (error) {
+    console.error('[AuraCarbon] Full AI service error:', error);
+    return null;
   }
-
-  // Scope 2 - Grid Electricity
-  if (scope2 > 0) {
-    suggestions.push({
-      recommendation: 'Install renewable energy capacity (solar/wind) on-site',
-      targetScope: 'Scope 2',
-      estimatedReduction: 80,
-      timelineMonths: 18,
-      costCategory: 'high',
-      implementation:
-        'Deploy solar PV or wind turbines. Consider power purchase agreements (PPAs) for lower upfront costs.',
-    });
-  }
-
-  // Scope 3 - Supply Chain
-  if (scope3 > 0) {
-    suggestions.push({
-      recommendation: 'Source materials from low-carbon suppliers',
-      targetScope: 'Scope 3',
-      estimatedReduction: 40,
-      timelineMonths: 6,
-      costCategory: 'low',
-      implementation:
-        'Audit suppliers, prioritize local sourcing, and establish carbon reduction targets in contracts.',
-    });
-  }
-
-  // General optimization
-  suggestions.push({
-    recommendation: 'Implement energy efficiency improvements and process optimization',
-    targetScope: 'Scope 2',
-    estimatedReduction: 20,
-    timelineMonths: 3,
-    costCategory: 'medium',
-    implementation:
-      'LED lighting, insulation, heat recovery systems, and process optimization can reduce baseline energy needs.',
-  });
-
-  return suggestions;
 }

@@ -1,0 +1,101 @@
+{
+  "steel": {
+    "alternative": "Recycled Steel / Electric Arc Furnace (EAF) Steel",
+    "reductionPercent": 58,
+    "scope": "Scope 3",
+    "timelineMonths": 6,
+    "costCategory": "medium",
+    "implementation": "Source steel from EAF producers using recycled scrap. EAF steel produces ~0.4 tCO2/t vs ~1.85 tCO2/t for BF-BOF. Verify supplier EPDs and request carbon intensity certificates.",
+    "emissionFactor": 0.4,
+    "originalFactor": 1.85,
+    "unit": "tCO2e/tonne"
+  },
+  "aluminum": {
+    "alternative": "Recycled Aluminum / Low-Carbon Smelted Aluminum",
+    "reductionPercent": 92,
+    "scope": "Scope 3",
+    "timelineMonths": 3,
+    "costCategory": "low",
+    "implementation": "Switch to recycled aluminum which requires only 5% of the energy of primary production. Source from certified recyclers. Recycled aluminum emits ~0.5 tCO2/t vs ~16.7 tCO2/t for primary.",
+    "emissionFactor": 0.5,
+    "originalFactor": 16.7,
+    "unit": "tCO2e/tonne"
+  },
+  "cement": {
+    "alternative": "Portland Pozzolana Cement (PPC) / Geopolymer Cement (E-Crete)",
+    "reductionPercent": 60,
+    "scope": "Scope 3",
+    "timelineMonths": 6,
+    "costCategory": "medium",
+    "implementation": "Replace OPC with PPC (50% clinker reduction) or geopolymer cement like E-Crete which uses industrial by-products. Conduct structural testing for your application. PPC emits ~0.35 tCO2/t vs ~0.89 tCO2/t for OPC.",
+    "emissionFactor": 0.35,
+    "originalFactor": 0.89,
+    "unit": "tCO2e/tonne"
+  },
+  "concrete": {
+    "alternative": "Geopolymer Concrete / Low-Carbon Concrete Mix",
+    "reductionPercent": 50,
+    "scope": "Scope 3",
+    "timelineMonths": 4,
+    "costCategory": "medium",
+    "implementation": "Use geopolymer concrete with fly ash or slag as binder instead of OPC. Reduces embodied carbon by 50-80%. Test compressive strength for structural compliance.",
+    "emissionFactor": 0.065,
+    "originalFactor": 0.13,
+    "unit": "tCO2e/tonne"
+  },
+  "glass": {
+    "alternative": "Recycled Glass Cullet / Low-E Glass",
+    "reductionPercent": 30,
+    "scope": "Scope 3",
+    "timelineMonths": 3,
+    "costCategory": "low",
+    "implementation": "Increase recycled cullet content to 80%+. Each 10% increase in cullet reduces energy by 2.5%. Source from certified glass recyclers.",
+    "emissionFactor": 0.875,
+    "originalFactor": 1.25,
+    "unit": "tCO2e/tonne"
+  },
+  "limestone": {
+    "alternative": "Industrial By-product Calcium Sources / Recycled calcium carbonate",
+    "reductionPercent": 25,
+    "scope": "Scope 3",
+    "timelineMonths": 6,
+    "costCategory": "low",
+    "implementation": "Replace virgin limestone with calcium-rich industrial by-products (steel slag, waste calcium carbonate). Reduces mining emissions and calcination CO2.",
+    "emissionFactor": 0.09,
+    "originalFactor": 0.12,
+    "unit": "tCO2e/tonne"
+  },
+  "natural gas": {
+    "alternative": "Biogas / Green Hydrogen / Biomethane",
+    "reductionPercent": 70,
+    "scope": "Scope 1",
+    "timelineMonths": 18,
+    "costCategory": "high",
+    "implementation": "Replace natural gas with biogas from anaerobic digestion or green hydrogen from electrolysis. Start with a pilot burner, then scale. Biomethane is a drop-in replacement for existing gas infrastructure.",
+    "emissionFactor": 0.61,
+    "originalFactor": 2.02,
+    "unit": "tCO2e/tonne"
+  },
+  "coal": {
+    "alternative": "Biomass Fuel / Refuse-Derived Fuel (RDF)",
+    "reductionPercent": 80,
+    "scope": "Scope 1",
+    "timelineMonths": 12,
+    "costCategory": "medium",
+    "implementation": "Replace coal with biomass pellets or RDF in kilns/boilers. Biomass is considered carbon-neutral under GHG Protocol. Requires burner modifications. BioChar technology can convert agricultural waste into green fuel briquettes.",
+    "emissionFactor": 0.48,
+    "originalFactor": 2.42,
+    "unit": "tCO2e/tonne"
+  },
+  "diesel": {
+    "alternative": "Biodiesel (B100) / Electric Vehicles / HVO",
+    "reductionPercent": 75,
+    "scope": "Scope 1",
+    "timelineMonths": 6,
+    "costCategory": "medium",
+    "implementation": "Switch fleet and generators to B100 biodiesel or Hydrotreated Vegetable Oil (HVO). For transport, evaluate electric vehicle alternatives. HVO is a drop-in replacement requiring no engine modifications.",
+    "emissionFactor": 0.67,
+    "originalFactor": 2.68,
+    "unit": "tCO2e/tonne"
+  }
+}

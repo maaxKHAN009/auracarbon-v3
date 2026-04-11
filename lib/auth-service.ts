@@ -5,6 +5,7 @@
 
 import { supabase, getSupabaseServerClient } from './supabase-client';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 interface RegisterData {
   email: string;
@@ -36,12 +37,12 @@ export function generateTempPassword(): string {
 }
 
 /**
- * Hash a password using bcrypt-like approach (basic)
- * In production, use bcrypt library
+ * Hash a password using bcryptjs
+ * Production-grade password hashing
  */
 export async function hashPassword(password: string): Promise<string> {
-  // Using basic approach - in production, use bcrypt or argon2
-  const hash = crypto.createHash('sha256').update(password).digest('hex');
+  const saltRounds = 10;
+  const hash = await bcrypt.hash(password, saltRounds);
   return hash;
 }
 

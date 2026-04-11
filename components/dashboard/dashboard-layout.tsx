@@ -17,6 +17,7 @@ import { HotspotAnalyzer } from './hotspot-analyzer';
 import { CarbonIntensityGauge } from './carbon-intensity-gauge';
 import { MaterialSubstitutionSuggestions } from './material-substitution';
 import { ScenarioPlanner } from './scenario-planner';
+import { EmissionAnalysisForm } from './emission-analysis-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Settings, User, LogOut, Shield, CheckSquare, FileText } from 'lucide-react';
 
@@ -218,6 +219,19 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
         {/* Scenario Planner */}
         <div className="col-span-1 md:col-span-12">
           <ScenarioPlanner />
+        </div>
+
+        {/* Detailed Carbon Analysis - NEW Phase 3 */}
+        <div className="col-span-1 md:col-span-12">
+          <section className="rounded-lg border border-slate-700 bg-slate-900 p-6">
+            <h2 className="text-2xl font-bold text-[#00FF88] mb-4">
+              Detailed Carbon Analysis
+            </h2>
+            <p className="text-gray-400 mb-6">
+              Provide detailed information to receive tailored recommendations for reducing your emissions.
+            </p>
+            <EmissionAnalysisForm />
+          </section>
         </div>
       </div>
     </div>

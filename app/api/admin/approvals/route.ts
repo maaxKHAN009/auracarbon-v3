@@ -13,7 +13,40 @@ import type { NextRequest } from 'next/server';
  */
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Add proper admin authentication check
+    // Admin authentication check
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return Response.json(
+        { error: 'Missing or invalid authorization header' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const supabaseServer = getSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabaseServer.auth.getUser(token);
+
+    if (authError || !user) {
+      return Response.json(
+        { error: 'Unauthorized: Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is admin
+    const { data: userData } = await supabaseServer
+      .from('users')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData?.is_admin) {
+      return Response.json(
+        { error: 'Forbidden: Admin access required' },
+        { status: 403 }
+      );
+    }
+
     const registrations = await getPendingRegistrations();
 
     return Response.json(
@@ -34,6 +67,40 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Admin authentication check
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return Response.json(
+        { error: 'Missing or invalid authorization header' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const supabaseServer = getSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabaseServer.auth.getUser(token);
+
+    if (authError || !user) {
+      return Response.json(
+        { error: 'Unauthorized: Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is admin
+    const { data: userData } = await supabaseServer
+      .from('users')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData?.is_admin) {
+      return Response.json(
+        { error: 'Forbidden: Admin access required' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { action, registrationId, adminUserId, reason } = body;
 
