@@ -266,11 +266,6 @@ export function PredictiveOptimization() {
                       📄 View E4C Evidence
                     </button>
                   )}
-                  {!suggestion.sourceUrl && (
-                    <div className="text-xs text-white/40">
-                      🔍 <span className="italic">AI-generated suggestion (verify with E4C documentation)</span>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}

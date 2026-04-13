@@ -485,13 +485,11 @@ export async function POST(request: NextRequest) {
       alternatives
     );
 
-    // ── Call LLM providers (cascade: Gemini → OpenAI → Fallback) ────────
+    // ── Call E4C Knowledge Base ONLY ────────────────────────────────────
+    // We no longer use LLM providers - all suggestions come from E4C validated database
+    // This ensures 100% source traceability and evidence-based recommendations
 
-    let suggestions: AIEmissionSuggestion[] | null = null;
-    let provider: 'gemini' | 'openai' | 'fallback' = 'fallback';
-
-    // Check if we have E4C alternatives that match materials
-    const materialMatches = generateFallbackSuggestions(
+    const suggestions = generateFallbackSuggestions(
       normalizedMaterials,
       scope1,
       scope2,
@@ -499,43 +497,20 @@ export async function POST(request: NextRequest) {
       currentEmissions,
       alternatives
     );
-
-    // If we have E4C matches, prioritize them (they have sourceUrl)
-    if (materialMatches.length > 0) {
-      suggestions = materialMatches;
-      provider = 'fallback';
-      console.log('[AuraCarbon] Using E4C fallback suggestions:', materialMatches.length);
-    } else {
-      // Try Gemini first (your existing provider)
-      suggestions = await callGemini(prompt);
-      if (suggestions && suggestions.length > 0) {
-        provider = 'gemini';
-        console.log('[AuraCarbon] Using Gemini suggestions');
-      }
-
-      // Fallback to OpenAI if Gemini fails
-      if (!suggestions || suggestions.length === 0) {
-        suggestions = await callOpenAI(prompt);
-        if (suggestions && suggestions.length > 0) {
-          provider = 'openai';
-          console.log('[AuraCarbon] Using OpenAI suggestions');
-        }
-      }
-
-      // Final fallback if LLM fails
-      if (!suggestions || suggestions.length === 0) {
-        suggestions = generateFallbackSuggestions(
-          normalizedMaterials,
-          scope1,
-          scope2,
-          scope3,
-          currentEmissions,
-          alternatives
-        );
-        provider = 'fallback';
-        console.log('[AuraCarbon] Using generic fallback suggestions');
-      }
+    
+    const provider: 'gemini' | 'openai' | 'fallback' = 'fallback'; // Always E4C
+    
+    if (suggestions.length === 0) {
+      return NextResponse.json(
+        {
+          error: 'No E4C solutions match your materials. Please verify material types match E4C database (cement, steel, glass, biomass, etc.).',
+          success: false,
+        },
+        { status: 400 }
+      );
     }
+
+    console.log('[AuraCarbon] Using E4C knowledge base only:', suggestions.length, 'suggestions');
 
     // ── Validate and sanitize suggestions ───────────────────────────────
 
