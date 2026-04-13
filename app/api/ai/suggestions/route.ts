@@ -490,31 +490,51 @@ export async function POST(request: NextRequest) {
     let suggestions: AIEmissionSuggestion[] | null = null;
     let provider: 'gemini' | 'openai' | 'fallback' = 'fallback';
 
-    // Try Gemini first (your existing provider)
-    suggestions = await callGemini(prompt);
-    if (suggestions && suggestions.length > 0) {
-      provider = 'gemini';
-    }
+    // Check if we have E4C alternatives that match materials
+    const materialMatches = generateFallbackSuggestions(
+      normalizedMaterials,
+      scope1,
+      scope2,
+      scope3,
+      currentEmissions,
+      alternatives
+    );
 
-    // Fallback to OpenAI if Gemini fails
-    if (!suggestions || suggestions.length === 0) {
-      suggestions = await callOpenAI(prompt);
-      if (suggestions && suggestions.length > 0) {
-        provider = 'openai';
-      }
-    }
-
-    // Final fallback: local alternatives database
-    if (!suggestions || suggestions.length === 0) {
-      suggestions = generateFallbackSuggestions(
-        normalizedMaterials,
-        scope1,
-        scope2,
-        scope3,
-        currentEmissions,
-        alternatives
-      );
+    // If we have E4C matches, prioritize them (they have sourceUrl)
+    if (materialMatches.length > 0) {
+      suggestions = materialMatches;
       provider = 'fallback';
+      console.log('[AuraCarbon] Using E4C fallback suggestions:', materialMatches.length);
+    } else {
+      // Try Gemini first (your existing provider)
+      suggestions = await callGemini(prompt);
+      if (suggestions && suggestions.length > 0) {
+        provider = 'gemini';
+        console.log('[AuraCarbon] Using Gemini suggestions');
+      }
+
+      // Fallback to OpenAI if Gemini fails
+      if (!suggestions || suggestions.length === 0) {
+        suggestions = await callOpenAI(prompt);
+        if (suggestions && suggestions.length > 0) {
+          provider = 'openai';
+          console.log('[AuraCarbon] Using OpenAI suggestions');
+        }
+      }
+
+      // Final fallback if LLM fails
+      if (!suggestions || suggestions.length === 0) {
+        suggestions = generateFallbackSuggestions(
+          normalizedMaterials,
+          scope1,
+          scope2,
+          scope3,
+          currentEmissions,
+          alternatives
+        );
+        provider = 'fallback';
+        console.log('[AuraCarbon] Using generic fallback suggestions');
+      }
     }
 
     // ── Validate and sanitize suggestions ───────────────────────────────
