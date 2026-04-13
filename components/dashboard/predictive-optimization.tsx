@@ -96,6 +96,8 @@ export function PredictiveOptimization() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('API Response:', data); // Debug logging
+        console.log('Suggestions with sourceUrl:', data.suggestions?.filter((s: any) => s.sourceUrl));
         setAiSuggestions(data.suggestions || []);
         setResponsibleAIDisclosure(data.responsibleAIDisclosure || '');
       }
