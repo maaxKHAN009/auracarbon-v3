@@ -194,12 +194,12 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
           <EmissionsPieChart />
         </div>
         <div className="col-span-1 md:col-span-7 min-h-[300px]">
-          <PredictiveOptimization />
+          {/* Spacer for visual balance - can be repurposed */}
         </div>
 
-        {/* Emissions Breakdown Section */}
-        <div className="col-span-1 md:col-span-12">
-          <EmissionsTable />
+        {/* Predictive Optimization - Full Width */}
+        <div className="col-span-1 md:col-span-12 min-h-[200px]">
+          <PredictiveOptimization />
         </div>
 
         {/* Analysis Row */}
@@ -208,6 +208,11 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
         </div>
         <div className="col-span-1 md:col-span-6">
           <CarbonIntensityGauge />
+        </div>
+
+        {/* Emissions Breakdown - Smaller height, positioned after analysis */}
+        <div className="col-span-1 md:col-span-12 min-h-[200px]">
+          <EmissionsTable />
         </div>
 
         {/* Material Substitution */}
