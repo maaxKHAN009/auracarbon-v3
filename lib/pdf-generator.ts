@@ -91,7 +91,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     startY,
     head: [['Material/Fuel', 'Quantity', 'Process', 'Emissions']],
     body: tableData,
-    theme: 'dark',
+    theme: 'striped',
     headStyles: {
       fillColor: [0, 204, 255],
       textColor: [18, 18, 18],
