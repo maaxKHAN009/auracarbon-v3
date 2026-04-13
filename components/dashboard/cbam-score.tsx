@@ -61,7 +61,7 @@ export function CbamScore() {
   const isAboveBenchmark = current > benchmark;
 
   return (
-    <GlassCard className="flex flex-col justify-between h-60" delay={0.4}>
+    <GlassCard className="flex flex-col justify-between min-h-[240px]" delay={0.4}>
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-sm font-medium text-white/60 tracking-wider uppercase">EU CBAM Compliance</h3>

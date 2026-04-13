@@ -5,9 +5,40 @@ import { GlassCard } from '@/components/ui/glass-card';
 import { useCarbonStore } from '@/lib/store';
 import { Save, Plus, Trash2, X } from 'lucide-react';
 
+// Supported currencies (matching credit-wallet)
+const SUPPORTED_CURRENCIES: Record<string, string> = {
+  'Germany': 'EUR',
+  'France': 'EUR',
+  'Italy': 'EUR',
+  'Spain': 'EUR',
+  'Netherlands': 'EUR',
+  'Belgium': 'EUR',
+  'Luxembourg': 'EUR',
+  'Austria': 'EUR',
+  'Poland': 'EUR',
+  'Czech Republic': 'CZK',
+  'Hungary': 'HUF',
+  'Romania': 'RON',
+  'Bulgaria': 'BGN',
+  'Croatia': 'HRK',
+  'Slovenia': 'EUR',
+  'Slovakia': 'EUR',
+  'United Kingdom': 'GBP',
+  'Ireland': 'EUR',
+  'United States': 'USD',
+  'Canada': 'CAD',
+  'Australia': 'AUD',
+  'Japan': 'JPY',
+  'China': 'CNY',
+  'India': 'INR',
+  'Brazil': 'BRL',
+  'Mexico': 'MXN',
+};
+
 export function AdminPanel({ onClose }: { onClose: () => void }) {
-  const { factors, updateFactors } = useCarbonStore();
+  const { factors, updateFactors, vcmValue, vcmCurrency, setVcmValue, setVcmCurrency } = useCarbonStore();
   const [localFactors, setLocalFactors] = useState(factors);
+  const [localVcmValue, setLocalVcmValue] = useState(vcmValue.toString());
   const [isSaving, setIsSaving] = useState(false);
 
   if (!localFactors) return null;
@@ -15,6 +46,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
   const handleSave = async () => {
     setIsSaving(true);
     await updateFactors(localFactors);
+    setVcmValue(parseFloat(localVcmValue) || 5.00);
     setIsSaving(false);
     onClose();
   };
@@ -125,6 +157,42 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+        {/* VCM Configuration Section */}
+        <div className="mb-8 p-4 rounded-lg bg-white/5 border border-white/10">
+          <h4 className="text-sm font-medium text-white/80 uppercase tracking-wider mb-4">VCM Pricing Configuration</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-white/60 uppercase tracking-wider mb-2">Default VCM Price (per ton)</label>
+              <input
+                type="number"
+                value={localVcmValue}
+                onChange={(e) => setLocalVcmValue(e.target.value)}
+                min="0"
+                step="0.01"
+                className="w-full bg-black/20 border border-white/10 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:border-[#00CCFF]"
+                placeholder="e.g., 5.00"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-white/60 uppercase tracking-wider mb-2">Default Currency</label>
+              <select
+                value={vcmCurrency}
+                onChange={(e) => setVcmCurrency(e.target.value)}
+                className="w-full bg-black/20 border border-white/10 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:border-[#00CCFF]"
+              >
+                {Object.values(SUPPORTED_CURRENCIES)
+                  .filter((v, i, a) => a.indexOf(v) === i)
+                  .map((curr) => (
+                    <option key={curr} value={curr}>
+                      {curr}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+          <p className="text-xs text-white/40 mt-2">These default values will be used when users open their credit wallet. They can modify them as needed.</p>
+        </div>
+
         {renderCategory('Materials (Scope 3)', 'materials', 'kg/kg')}
         {renderCategory('Fuels (Scope 1)', 'fuels', 'kg/unit')}
         {renderCategory('Grid Factors (Scope 2)', 'grids', 'kg/kWh')}

@@ -189,20 +189,15 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
           </AnimatePresence>
         </div>
 
-        {/* Bottom Row: Charts & Analytics - Flexible height based on content */}
-        <div className="col-span-1 md:col-span-5 min-h-[300px]">
+        {/* Bottom Row: Charts & Analytics - Dynamic sizing */}
+        <div className="col-span-1 md:col-span-6 min-h-[300px]">
           <EmissionsPieChart />
         </div>
-        <div className="col-span-1 md:col-span-7 min-h-[300px]">
-          {/* Spacer for visual balance - can be repurposed */}
-        </div>
-
-        {/* Predictive Optimization - Full Width */}
-        <div className="col-span-1 md:col-span-12 min-h-[200px]">
+        <div className="col-span-1 md:col-span-6 min-h-[300px]">
           <PredictiveOptimization />
         </div>
 
-        {/* Analysis Row */}
+        {/* Analysis Row - Full Width when needed */}
         <div className="col-span-1 md:col-span-6">
           <HotspotAnalyzer />
         </div>
@@ -210,7 +205,7 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
           <CarbonIntensityGauge />
         </div>
 
-        {/* Emissions Breakdown - Smaller height, positioned after analysis */}
+        {/* Emissions Breakdown - Will expand to fill available space */}
         <div className="col-span-1 md:col-span-12 min-h-[200px]">
           <EmissionsTable />
         </div>

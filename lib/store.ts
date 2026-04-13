@@ -24,11 +24,15 @@ interface CarbonStore {
   factors: FactorsData | null;
   error: string | null;
   isLoading: boolean;
+  vcmValue: number; // User-input VCM price per ton
+  vcmCurrency: string; // Currency type (USD, EUR, GBP, etc.)
   addRow: () => void;
   updateRow: (id: string, field: keyof RecipeRow, value: string | number) => void;
   removeRow: (id: string) => void;
   setCountry: (country: string) => void;
   setTotalProductOutput: (output: number) => void;
+  setVcmValue: (value: number) => void;
+  setVcmCurrency: (currency: string) => void;
   fetchFactors: () => Promise<void>;
   updateFactors: (newFactors: FactorsData) => Promise<void>;
   clearError: () => void;
@@ -43,6 +47,8 @@ const DEFAULT_STATE = {
   factors: null as FactorsData | null,
   error: null as string | null,
   isLoading: false,
+  vcmValue: 5.00, // Default VCM price
+  vcmCurrency: 'USD', // Default currency
 };
 
 /** Load persisted store data from localStorage */
@@ -56,6 +62,8 @@ const loadStorageState = (): Partial<CarbonStore> => {
         rows: parsed.rows || [],
         country: parsed.country || DEFAULT_STATE.country,
         totalProductOutput: parsed.totalProductOutput || DEFAULT_STATE.totalProductOutput,
+        vcmValue: parsed.vcmValue || DEFAULT_STATE.vcmValue,
+        vcmCurrency: parsed.vcmCurrency || DEFAULT_STATE.vcmCurrency,
       };
     }
   } catch (error) {
@@ -65,10 +73,10 @@ const loadStorageState = (): Partial<CarbonStore> => {
 };
 
 /** Save store data to localStorage */
-const persistStore = (rows: RecipeRow[], country: string, totalProductOutput: number) => {
+const persistStore = (rows: RecipeRow[], country: string, totalProductOutput: number, vcmValue: number, vcmCurrency: string) => {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows, country, totalProductOutput }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows, country, totalProductOutput, vcmValue, vcmCurrency }));
   } catch (error) {
     console.warn('Failed to persist state to localStorage:', error);
   }
@@ -84,6 +92,8 @@ export const useCarbonStore = create<CarbonStore>((set, get) => {
     factors: null,
     error: null,
     isLoading: false,
+    vcmValue: (initialState.vcmValue as number) || DEFAULT_STATE.vcmValue,
+    vcmCurrency: (initialState.vcmCurrency as string) || DEFAULT_STATE.vcmCurrency,
 
     addRow: () => set((state) => {
       const newRows = [...state.rows, { 
@@ -93,7 +103,7 @@ export const useCarbonStore = create<CarbonStore>((set, get) => {
         unit: 'Tons' as UnitType, 
         process: 'Raw Material' as ProcessType 
       }];
-      persistStore(newRows, state.country, state.totalProductOutput);
+      persistStore(newRows, state.country, state.totalProductOutput, state.vcmValue, state.vcmCurrency);
       return { rows: newRows };
     }),
 
@@ -103,24 +113,24 @@ export const useCarbonStore = create<CarbonStore>((set, get) => {
           ? { ...row, [field]: field === 'quantity' ? Math.max(0, Number(value)) : value }
           : row
       );
-      persistStore(newRows, state.country, state.totalProductOutput);
+      persistStore(newRows, state.country, state.totalProductOutput, state.vcmValue, state.vcmCurrency);
       return { rows: newRows };
     }),
 
     removeRow: (id) => set((state) => {
       const newRows = state.rows.filter(row => row.id !== id);
-      persistStore(newRows, state.country, state.totalProductOutput);
+      persistStore(newRows, state.country, state.totalProductOutput, state.vcmValue, state.vcmCurrency);
       return { rows: newRows };
     }),
 
     setCountry: (country) => set((state) => {
-      persistStore(state.rows, country, state.totalProductOutput);
+      persistStore(state.rows, country, state.totalProductOutput, state.vcmValue, state.vcmCurrency);
       return { country };
     }),
 
     setTotalProductOutput: (output) => set((state) => {
       const validOutput = Math.max(1, Number(output) || 1);
-      persistStore(state.rows, state.country, validOutput);
+      persistStore(state.rows, state.country, validOutput, state.vcmValue, state.vcmCurrency);
       return { totalProductOutput: validOutput };
     }),
 
@@ -162,6 +172,17 @@ export const useCarbonStore = create<CarbonStore>((set, get) => {
     },
 
     clearError: () => set({ error: null }),
+
+    setVcmValue: (value) => set((state) => {
+      const validValue = Math.max(0, Number(value) || 0);
+      persistStore(state.rows, state.country, state.totalProductOutput, validValue, state.vcmCurrency);
+      return { vcmValue: validValue };
+    }),
+
+    setVcmCurrency: (currency) => set((state) => {
+      persistStore(state.rows, state.country, state.totalProductOutput, state.vcmValue, currency);
+      return { vcmCurrency: currency };
+    }),
 
     resetStore: () => {
       if (typeof window !== 'undefined') {
