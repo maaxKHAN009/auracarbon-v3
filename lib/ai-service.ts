@@ -17,6 +17,9 @@ export interface AIEmissionSuggestion {
   implementation: string;
   alternativeProduct?: string;
   annualCO2Saved?: number;
+  sourceUrl?: string;        // E4C source link or external evidence
+  sourceTitle?: string;      // Source reference title
+  limitations: string;       // Responsible AI: constraints & uncertainties
 }
 
 export interface CarbonCreditProjection {
@@ -46,6 +49,7 @@ export interface AISuggestionsResponse {
   emissionSummary: EmissionSummary;
   provider: 'gemini' | 'openai' | 'fallback';
   generatedAt: string;
+  responsibleAIDisclosure: string; // E4C Responsible AI Policy compliance
 }
 
 // ─── Main Function ───────────────────────────────────────────────────────────

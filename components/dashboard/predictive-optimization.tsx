@@ -21,6 +21,9 @@ interface AISuggestion {
   timelineMonths: number;
   costCategory: 'low' | 'medium' | 'high';
   implementation: string;
+  sourceUrl?: string;
+  sourceTitle?: string;
+  limitations: string;
 }
 
 export function PredictiveOptimization() {
@@ -28,6 +31,7 @@ export function PredictiveOptimization() {
   const [trajectoryData, setTrajectoryData] = useState<TrajectoryPoint[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [responsibleAIDisclosure, setResponsibleAIDisclosure] = useState<string>('');
 
   // Memoize calculations to prevent unnecessary recalculations
   const emissionsData = useMemo(() => {
@@ -76,17 +80,25 @@ export function PredictiveOptimization() {
       const materials = [...new Set(rows.map((r) => r.materialOrFuel))];
       const processes = [...new Set(rows.map((r) => r.process))];
 
-      const suggestions = await getAIEmissionSuggestions(
-        materials,
-        processes,
-        emissionsData.total,
-        emissionsData.scope1 || 0,
-        emissionsData.scope2 || 0,
-        emissionsData.scope3 || 0,
-        totalProductOutput || 1
-      );
+      const response = await fetch('/api/ai/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          materials,
+          processes,
+          currentEmissions: emissionsData.total,
+          scope1: emissionsData.scope1 || 0,
+          scope2: emissionsData.scope2 || 0,
+          scope3: emissionsData.scope3 || 0,
+          productOutput: totalProductOutput || 1,
+        }),
+      });
 
-      setAiSuggestions(suggestions);
+      if (response.ok) {
+        const data = await response.json();
+        setAiSuggestions(data.suggestions || []);
+        setResponsibleAIDisclosure(data.responsibleAIDisclosure || '');
+      }
     } catch (error) {
       console.error('Error fetching AI suggestions:', error);
       setAiSuggestions([]);
@@ -195,7 +207,10 @@ export function PredictiveOptimization() {
       {/* AI-Powered Suggestions Section */}
       <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs text-white/40 uppercase tracking-wider">AI-Powered Insights</h4>
+          <h4 className="text-xs text-white/40 uppercase tracking-wider flex items-center gap-2">
+            <Sparkles className="w-3 h-3" />
+            AI-Powered Advisory Insights (E4C-Grounded)
+          </h4>
           <button
             onClick={handleGetAISuggestions}
             disabled={aiLoading || emissionsData.total === 0}
@@ -208,11 +223,11 @@ export function PredictiveOptimization() {
         </div>
 
         {aiSuggestions.length > 0 && (
-          <div className="space-y-2 mt-2">
+          <div className="space-y-3 mt-3">
             {aiSuggestions.map((suggestion, index) => (
               <div
                 key={index}
-                className="p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
+                className="p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors space-y-2"
                 role="article"
                 aria-label={`${suggestion.recommendation}: ${suggestion.estimatedReduction}% reduction in ${suggestion.timelineMonths} months`}
               >
@@ -232,8 +247,36 @@ export function PredictiveOptimization() {
                     <div className="text-xs text-white/40">Reduction</div>
                   </div>
                 </div>
+
+                {/* Limitations & Evidence Row */}
+                <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
+                  {suggestion.limitations && (
+                    <div className="text-xs text-white/50 italic">
+                      ⚠️ <span className="font-medium">Limitations:</span> {suggestion.limitations}
+                    </div>
+                  )}
+                  {suggestion.sourceUrl && (
+                    <button
+                      onClick={() => window.open(suggestion.sourceUrl, '_blank')}
+                      className="text-xs px-2 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-[#00CCFF] hover:text-[#00CCFF] transition-colors self-start flex items-center gap-1"
+                      aria-label={`View E4C evidence: ${suggestion.sourceTitle}`}
+                    >
+                      📄 View E4C Evidence
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
+
+            {/* Responsible AI Disclosure Footer */}
+            {responsibleAIDisclosure && (
+              <div className="mt-3 p-3 rounded-lg bg-white/5 border border-white/10">
+                <div className="text-xs text-white/50 space-y-1">
+                  <p className="font-medium text-white/60">📋 Responsible AI Notice:</p>
+                  <p>{responsibleAIDisclosure}</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

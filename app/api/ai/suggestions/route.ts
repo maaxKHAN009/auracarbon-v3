@@ -34,6 +34,9 @@ interface AIEmissionSuggestion {
   implementation: string;
   alternativeProduct?: string;
   annualCO2Saved?: number;          // tonnes CO2e/year
+  sourceUrl?: string;               // E4C or external evidence link
+  sourceTitle?: string;             // Source reference title
+  limitations: string;              // Responsible AI: acknowledge constraints & uncertainties
 }
 
 interface CarbonCreditProjection {
@@ -61,6 +64,7 @@ interface SuggestionsResponse {
   };
   provider: 'gemini' | 'openai' | 'fallback';
   generatedAt: string;
+  responsibleAIDisclosure: string; // Compliance with E4C Responsible AI Policy
 }
 
 // ─── Rate Limiter (simple in-memory) ─────────────────────────────────────────
@@ -147,12 +151,12 @@ function buildPrompt(
     ? (currentEmissions / 1000 / productOutput).toFixed(4)
     : 'N/A';
 
-  // Include known alternatives as context
+  // Include E4C validated solutions as context
   const altContext = Object.keys(alternatives).length > 0
-    ? `\n\nKNOWN ALTERNATIVES DATABASE:\n${JSON.stringify(alternatives, null, 2)}`
+    ? `\n\nE4C-VALIDATED TECHNICAL SOLUTIONS DATABASE:\n${JSON.stringify(alternatives, null, 2)}\n\nIMPORTANT: Prioritize solutions from this database when available. These are Engineering for Change vetted solutions with source evidence.`
     : '';
 
-  return `You are an environmental engineering expert specializing in industrial carbon emissions reduction, carbon credit markets, and sustainable manufacturing.
+  return `You are an environmental engineering expert specializing in industrial carbon emissions reduction, carbon credit markets, and sustainable manufacturing. You comply with the Responsible AI Policy for transparent, grounded recommendations.
 
 EMISSION REPORT:
 ================
@@ -169,7 +173,8 @@ ${materialsList}
 ${altContext}
 
 TASK:
-Provide exactly 5 actionable emission reduction recommendations. For each, specify:
+Provide exactly 5 actionable emission reduction recommendations. For EACH recommendation, you MUST include all 9 required fields:
+
 1. recommendation: Clear, specific action (max 100 chars)
 2. targetScope: Which scope it addresses ("Scope 1", "Scope 2", or "Scope 3")
 3. estimatedReduction: Realistic percentage reduction (0-100) for that scope
@@ -178,12 +183,20 @@ Provide exactly 5 actionable emission reduction recommendations. For each, speci
 6. implementation: Step-by-step implementation guide (2-3 sentences)
 7. alternativeProduct: Specific alternative material/process/technology name
 8. annualCO2Saved: Estimated annual CO2 saved in tonnes
+9. limitations: MANDATORY - Cite specific constraints, uncertainties, or risks (e.g., "Limited supply chain maturity", "High upfront CAPEX", "Requires local expertise")
+
+CRITICAL - RESPONSIBLE AI COMPLIANCE:
+- Prioritize solutions from the E4C Solutions Database when available
+- If you recommend an E4C solution, include its sourceUrl and sourceTitle from the database
+- For ALL other recommendations, either provide external evidence links or acknowledge the limitation
+- NEVER omit the "limitations" field - this ensures transparent communication about constraints
 
 Focus on:
 - The dominant emission scope first
 - Practical alternatives for the specific materials listed
 - Industry-proven technologies and methods
 - Quick wins (low cost, high impact) first
+- E4C-validated solutions when available
 
 RESPOND WITH VALID JSON ONLY — no markdown, no code fences, no explanation outside the JSON.
 Use this exact structure:
@@ -197,7 +210,10 @@ Use this exact structure:
       "costCategory": "low" | "medium" | "high",
       "implementation": "string",
       "alternativeProduct": "string",
-      "annualCO2Saved": number
+      "annualCO2Saved": number,
+      "sourceUrl": "string or null (for E4C solutions or external evidence)",
+      "sourceTitle": "string or null",
+      "limitations": "string (REQUIRED - always include)"
     }
   ]
 }`;
@@ -289,7 +305,7 @@ function generateFallbackSuggestions(
   const suggestions: AIEmissionSuggestion[] = [];
   const materialNames = materials.map(m => m.name.toLowerCase());
 
-  // Material-specific suggestions from alternatives database
+  // Material-specific suggestions from E4C alternatives database
   for (const mat of materials) {
     const altKey = mat.name.toLowerCase();
     if (alternatives[altKey]) {
@@ -303,6 +319,9 @@ function generateFallbackSuggestions(
         implementation: alt.implementation || `Switch from ${mat.name} to ${alt.alternative}. Conduct pilot testing, then scale.`,
         alternativeProduct: alt.alternative,
         annualCO2Saved: (currentEmissions * (alt.reductionPercent || 20) / 100) / 1000,
+        sourceUrl: alt.sourceUrl,
+        sourceTitle: alt.sourceTitle,
+        limitations: alt.limitations || 'Implementation requirements vary by location and facility type.',
       });
     }
   }
@@ -318,6 +337,9 @@ function generateFallbackSuggestions(
       implementation: 'Audit current fuel usage. Replace coal/diesel burners with natural gas or biomass alternatives. Monitor emissions quarterly.',
       alternativeProduct: 'Biomass fuel / Natural gas',
       annualCO2Saved: (scope1 * 0.25) / 1000,
+      sourceUrl: undefined,
+      sourceTitle: undefined,
+      limitations: 'Requires burner retrofitting; fuel supply chain needs assessment; local regulations may restrict biomass use.',
     });
   }
 
@@ -331,6 +353,9 @@ function generateFallbackSuggestions(
       implementation: 'Sign a Power Purchase Agreement (PPA) for renewable energy. Alternatively, install rooftop solar panels to offset grid electricity consumption.',
       alternativeProduct: 'Solar PV / Wind PPA',
       annualCO2Saved: (scope2 * 0.40) / 1000,
+      sourceUrl: undefined,
+      sourceTitle: undefined,
+      limitations: 'PPA costs vary by region; solar requires 12-18 months for permitting/installation; geographic constraints may limit solar potential.',
     });
   }
 
@@ -344,6 +369,9 @@ function generateFallbackSuggestions(
       implementation: 'Identify suppliers with verified Environmental Product Declarations (EPDs). Prioritize recycled or low-carbon alternatives for top 3 materials by emission volume.',
       alternativeProduct: 'Recycled / EPD-certified materials',
       annualCO2Saved: (scope3 * 0.15) / 1000,
+      sourceUrl: undefined,
+      sourceTitle: undefined,
+      limitations: 'Supply chain transitions take 6-12 months; EPD verification costs ~$5-10K per material; price premiums typically 5-15% vs conventional.',
     });
   }
 
@@ -358,6 +386,9 @@ function generateFallbackSuggestions(
       implementation: 'Conduct a comprehensive energy audit. Install VFDs on motors, upgrade to LED lighting, optimize HVAC schedules. Expected payback: 12-18 months.',
       alternativeProduct: 'VFDs, LED lighting, smart HVAC controls',
       annualCO2Saved: (currentEmissions * 0.05) / 1000,
+      sourceUrl: undefined,
+      sourceTitle: undefined,
+      limitations: 'Payback periods vary by facility age/condition; requires ongoing maintenance; control system compatibility must be verified.',
     });
   }
 
@@ -372,6 +403,9 @@ function generateFallbackSuggestions(
       implementation: 'Analyze production schedules for idle time. Consolidate batch runs to minimize furnace/kiln restarts. Implement real-time energy monitoring dashboards.',
       alternativeProduct: 'Production scheduling software',
       annualCO2Saved: (currentEmissions * 0.03) / 1000,
+      sourceUrl: undefined,
+      sourceTitle: undefined,
+      limitations: 'Requires production floor data collection; savings depend on existing scheduling practices; labor coordination needed.',
     });
   }
 
@@ -498,6 +532,9 @@ export async function POST(request: NextRequest) {
       implementation: String(s.implementation || '').slice(0, 500),
       alternativeProduct: String(s.alternativeProduct || 'N/A').slice(0, 100),
       annualCO2Saved: Math.max(0, Number(s.annualCO2Saved) || 0),
+      sourceUrl: s.sourceUrl ? String(s.sourceUrl).slice(0, 500) : undefined,
+      sourceTitle: s.sourceTitle ? String(s.sourceTitle).slice(0, 200) : undefined,
+      limitations: String(s.limitations || 'Consult with local experts for feasibility assessment.').slice(0, 500),
     }));
 
     // ── Calculate carbon credit projections ─────────────────────────────
@@ -548,6 +585,7 @@ export async function POST(request: NextRequest) {
       emissionSummary,
       provider,
       generatedAt: new Date().toISOString(),
+      responsibleAIDisclosure: "Advisory Content: Recommendations are grounded in E4C research and validated technical solutions. Implementation requires human-in-the-loop expert review to verify local technical feasibility, economic assumptions, and regulatory compliance. Each recommendation includes documented limitations. This AI system is designed to complement—not replace—professional engineering judgment.",
     };
 
     return NextResponse.json(response, { status: 200 });
