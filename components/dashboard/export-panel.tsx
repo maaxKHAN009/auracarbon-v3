@@ -2,91 +2,204 @@
 
 import React, { useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Clipboard, Download, Info } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { buildIndustrialCarbonContextReport } from '@/lib/report-engine';
+import { buildIndustrialCarbonContextReport, GeneratedContextReport } from '@/lib/report-engine';
 import { useCarbonStore } from '@/lib/store';
 
-function toPdf(reportText: string, generatedAtIso: string): Blob {
+function toPdf(report: GeneratedContextReport): Blob {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  const margin = 40;
+  const margin = 34;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const maxWidth = pageWidth - margin * 2;
-  const lines = reportText.split('\n');
+  const contentWidth = pageWidth - margin * 2;
 
-  const writeFooter = (pageNum: number) => {
+  const writeFooter = () => {
+    const pageNum = doc.getCurrentPageInfo().pageNumber;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(120, 120, 120);
-    doc.text(`AuraCarbon v3 | Decision-Support Artifact | Generated: ${generatedAtIso}`, margin, pageHeight - 16);
+    doc.setTextColor(140, 140, 140);
+    doc.text(
+      `AuraCarbon v3 | Decision-Support Artifact | Generated: ${report.metadata.generatedAtIso}`,
+      margin,
+      pageHeight - 16
+    );
     doc.text(`Page ${pageNum}`, pageWidth - margin, pageHeight - 16, { align: 'right' });
   };
 
-  let y = margin;
-  let pageNum = 1;
+  const drawSectionTitle = (title: string, y: number, color: [number, number, number]) => {
+    doc.setFillColor(color[0], color[1], color[2]);
+    doc.roundedRect(margin, y, contentWidth, 24, 4, 4, 'F');
+    doc.setTextColor(18, 18, 18);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(title, margin + 10, y + 16);
+  };
 
-  for (const rawLine of lines) {
-    const line = rawLine ?? '';
+  doc.setFillColor(18, 18, 18);
+  doc.roundedRect(margin, margin, contentWidth, 78, 8, 8, 'F');
+  doc.setTextColor(0, 255, 136);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(17);
+  doc.text('Industrial Carbon Context Report', margin + 12, margin + 24);
+  doc.setFontSize(10);
+  doc.setTextColor(220, 220, 220);
+  doc.text(`Label: ${report.metadata.decisionTag}`, margin + 12, margin + 42);
+  doc.text(`App: ${report.metadata.appVersion}`, margin + 12, margin + 56);
+  doc.text(`Generated (UTC): ${report.metadata.generatedAtIso}`, margin + 12, margin + 70);
 
-    let fontSize = 10;
-    let fontStyle: 'normal' | 'bold' = 'normal';
-    let lineGap = 13;
+  let y = margin + 92;
 
-    if (line.startsWith('# ')) {
-      fontSize = 15;
-      fontStyle = 'bold';
-      lineGap = 20;
-    } else if (line.startsWith('## ')) {
-      fontSize = 12;
-      fontStyle = 'bold';
-      lineGap = 16;
-    } else if (line.startsWith('### ')) {
-      fontSize = 11;
-      fontStyle = 'bold';
-      lineGap = 14;
-    } else if (line.startsWith('---')) {
-      if (y > pageHeight - margin - 24) {
-        writeFooter(pageNum);
-        doc.addPage();
-        pageNum += 1;
-        y = margin;
-      }
-      doc.setDrawColor(180, 180, 180);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 12;
-      continue;
-    }
+  drawSectionTitle('System Metadata & Responsible AI', y, [0, 204, 255]);
+  y += 30;
 
-    const cleaned = line
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/^#{1,3}\s+/, '');
+  autoTable(doc, {
+    startY: y,
+    theme: 'grid',
+    head: [['Field', 'Value']],
+    body: [
+      ['Country Grid', report.metadata.country],
+      ['Total Product Output', `${report.metadata.totalProductOutput} tons`],
+      ['Responsible AI Disclaimer', report.metadata.disclaimer],
+    ],
+    styles: { fontSize: 9, cellPadding: 6, textColor: [230, 230, 230], fillColor: [30, 30, 30] },
+    headStyles: { fillColor: [0, 204, 255], textColor: [18, 18, 18], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [38, 38, 38] },
+    margin: { left: margin, right: margin },
+  });
 
-    const wrapped = doc.splitTextToSize(cleaned, maxWidth);
-    const neededHeight = Math.max(lineGap, wrapped.length * lineGap);
+  y = ((doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || y) + 14;
+  drawSectionTitle('Raw Input Data (RecipeBuilder)', y, [0, 255, 136]);
+  y += 30;
 
-    if (y + neededHeight > pageHeight - margin - 22) {
-      writeFooter(pageNum);
-      doc.addPage();
-      pageNum += 1;
-      y = margin;
-    }
+  autoTable(doc, {
+    startY: y,
+    theme: 'grid',
+    head: [['#', 'Material/Fuel', 'Process', 'Quantity', 'Estimated Emissions (kg CO2e)']],
+    body: report.rows.length
+      ? report.rows.map((row) => [
+          row.index.toString(),
+          row.materialOrFuel,
+          row.process,
+          row.quantityWithUnit,
+          row.estimatedEmissionsKg.toFixed(2),
+        ])
+      : [['-', 'No input rows provided', '-', '-', '-']],
+    styles: { fontSize: 8.5, cellPadding: 5, textColor: [230, 230, 230], fillColor: [30, 30, 30] },
+    headStyles: { fillColor: [0, 255, 136], textColor: [18, 18, 18], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [38, 38, 38] },
+    margin: { left: margin, right: margin },
+  });
 
-    doc.setFont('helvetica', fontStyle);
-    doc.setFontSize(fontSize);
-    doc.setTextColor(20, 20, 20);
+  y = ((doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || y) + 14;
+  drawSectionTitle('Technical Metrics', y, [255, 204, 0]);
+  y += 30;
 
-    wrapped.forEach((segment: string) => {
-      doc.text(segment, margin, y);
-      y += lineGap;
-    });
+  autoTable(doc, {
+    startY: y,
+    theme: 'grid',
+    head: [['Metric', 'Value']],
+    body: [
+      ['Total Emissions', `${report.metrics.totalKg.toFixed(2)} kg CO2e (${report.metrics.totalTonnes.toFixed(4)} tCO2e)`],
+      ['Scope 1', `${report.metrics.scope1Kg.toFixed(2)} kg CO2e`],
+      ['Scope 2', `${report.metrics.scope2Kg.toFixed(2)} kg CO2e`],
+      ['Scope 3', `${report.metrics.scope3Kg.toFixed(2)} kg CO2e`],
+      ['Carbon Intensity', `${report.metrics.carbonIntensity.toFixed(4)} tCO2e/t`],
+      ['EU CBAM Risk Score', report.metrics.cbamRisk],
+    ],
+    styles: { fontSize: 9, cellPadding: 6, textColor: [230, 230, 230], fillColor: [30, 30, 30] },
+    headStyles: { fillColor: [255, 204, 0], textColor: [18, 18, 18], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [38, 38, 38] },
+    margin: { left: margin, right: margin },
+  });
 
-    if (cleaned.length === 0) {
-      y += 4;
-    }
+  y = ((doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || y) + 14;
+  drawSectionTitle('Local Base Recommendations (E4C-Validated)', y, [255, 51, 102]);
+  y += 30;
+
+  autoTable(doc, {
+    startY: y,
+    theme: 'grid',
+    head: [['Category', 'Technology', 'Reduction %', 'Implementation & Limitations']],
+    body: report.recommendations.map((item) => [
+      item.category,
+      `${item.title}\n${item.alternative}`,
+      `${item.reductionPercent}%`,
+      `Implementation: ${item.implementation}\nLimitations: ${item.limitations}`,
+    ]),
+    styles: { fontSize: 8, cellPadding: 5, textColor: [230, 230, 230], fillColor: [30, 30, 30], overflow: 'linebreak' },
+    headStyles: { fillColor: [255, 51, 102], textColor: [255, 255, 255], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [38, 38, 38] },
+    margin: { left: margin, right: margin },
+    columnStyles: {
+      0: { cellWidth: 70 },
+      1: { cellWidth: 130 },
+      2: { cellWidth: 60, halign: 'center' },
+      3: { cellWidth: contentWidth - 70 - 130 - 60 },
+    },
+  });
+
+  y = ((doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || y) + 18;
+  if (y > pageHeight - 180) {
+    writeFooter();
+    doc.addPage();
+    y = margin;
   }
 
-  writeFooter(pageNum);
+  doc.setDrawColor(120, 120, 120);
+  doc.setLineWidth(1);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 14;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(0, 204, 255);
+  doc.text('E4C Knowledgebase References & Citations', margin, y);
+  y += 12;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(40, 40, 40);
+  report.citations.forEach((citation, index) => {
+    if (y > pageHeight - 38) {
+      writeFooter();
+      doc.addPage();
+      y = margin;
+    }
+    const line = `${index + 1}. ${citation.sourceTitle} - ${citation.sourceUrl}`;
+    const wrapped = doc.splitTextToSize(line, contentWidth);
+    wrapped.forEach((segment: string) => {
+      doc.text(segment, margin, y);
+      y += 11;
+    });
+    y += 3;
+  });
+
+  if (y > pageHeight - 60) {
+    writeFooter();
+    doc.addPage();
+    y = margin;
+  }
+
+  doc.setDrawColor(120, 120, 120);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 14;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(255, 51, 102);
+  doc.text('Responsible AI Guardrail', margin, y);
+  y += 12;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(70, 70, 70);
+  const disclaimerLines = doc.splitTextToSize(report.metadata.disclaimer, contentWidth);
+  disclaimerLines.forEach((line: string) => {
+    doc.text(line, margin, y);
+    y += 11;
+  });
+
+  writeFooter();
 
   return doc.output('blob');
 }
@@ -120,7 +233,7 @@ export function ExportPanel() {
         country,
         totalProductOutput,
       });
-      const pdfBlob = toPdf(report.markdown, report.timestampIso);
+      const pdfBlob = toPdf(report);
       const stamp = report.timestampIso.split('T')[0];
       downloadBlob(pdfBlob, `Industrial-Carbon-Context-Report-${stamp}.pdf`);
     } finally {

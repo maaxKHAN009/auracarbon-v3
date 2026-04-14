@@ -13,6 +13,44 @@ export interface GeneratedContextReport {
   markdown: string;
   plainText: string;
   timestampIso: string;
+  metadata: {
+    appVersion: string;
+    generatedAtIso: string;
+    decisionTag: string;
+    disclaimer: string;
+    country: string;
+    totalProductOutput: number;
+  };
+  rows: Array<{
+    index: number;
+    materialOrFuel: string;
+    process: string;
+    quantityWithUnit: string;
+    estimatedEmissionsKg: number;
+  }>;
+  metrics: {
+    totalKg: number;
+    totalTonnes: number;
+    scope1Kg: number;
+    scope2Kg: number;
+    scope3Kg: number;
+    carbonIntensity: number;
+    cbamRisk: 'Low' | 'Medium' | 'High';
+  };
+  recommendations: Array<{
+    category: string;
+    title: string;
+    alternative: string;
+    reductionPercent: number;
+    implementation: string;
+    limitations: string;
+    sourceTitle: string;
+    sourceUrl: string;
+  }>;
+  citations: Array<{
+    sourceTitle: string;
+    sourceUrl: string;
+  }>;
 }
 
 interface AlternativeRecord {
@@ -78,16 +116,44 @@ export function buildIndustrialCarbonContextReport(input: ReportEngineInput): Ge
   const cbamRisk = calculateCBAMScore(intensity);
   const alternatives = selectRelevantAlternatives(input.rows);
 
-  const rowLines = input.rows.length
-    ? input.rows
-        .map((row, idx) => {
-          const rowEmissions = calculateRowEmissions(row, input.factors, input.country);
-          return `| ${idx + 1} | ${row.materialOrFuel || 'N/A'} | ${row.process} | ${row.quantity} ${row.unit} | ${rowEmissions.toFixed(2)} kg CO2e |`;
+  const rowDetails = input.rows.map((row, idx) => {
+    const estimatedEmissionsKg = calculateRowEmissions(row, input.factors, input.country);
+    return {
+      index: idx + 1,
+      materialOrFuel: row.materialOrFuel || 'N/A',
+      process: row.process,
+      quantityWithUnit: `${row.quantity} ${row.unit}`,
+      estimatedEmissionsKg,
+    };
+  });
+
+  const recommendations = alternatives.map((alt) => ({
+    category: alt.category,
+    title: alt.title,
+    alternative: alt.alternative,
+    reductionPercent: alt.reductionPercent,
+    implementation: alt.implementation,
+    limitations: alt.limitations,
+    sourceTitle: alt.sourceTitle,
+    sourceUrl: alt.sourceUrl,
+  }));
+
+  const citationMap = new Map<string, { sourceTitle: string; sourceUrl: string }>();
+  recommendations.forEach((item) => {
+    const key = `${item.sourceTitle}|${item.sourceUrl}`;
+    citationMap.set(key, { sourceTitle: item.sourceTitle, sourceUrl: item.sourceUrl });
+  });
+  const citations = Array.from(citationMap.values());
+
+  const rowLines = rowDetails.length
+    ? rowDetails
+        .map((row) => {
+          return `| ${row.index} | ${row.materialOrFuel} | ${row.process} | ${row.quantityWithUnit} | ${row.estimatedEmissionsKg.toFixed(2)} kg CO2e |`;
         })
         .join('\n')
     : '| - | No input rows provided | - | - | - |';
 
-  const recommendationsLines = alternatives
+  const recommendationsLines = recommendations
     .map((alt, idx) => {
       return [
         `### ${idx + 1}. ${alt.title}`,
@@ -140,5 +206,25 @@ export function buildIndustrialCarbonContextReport(input: ReportEngineInput): Ge
     markdown,
     plainText: markdown,
     timestampIso,
+    metadata: {
+      appVersion: APP_VERSION,
+      generatedAtIso: timestampIso,
+      decisionTag: DECISION_TAG,
+      disclaimer: RESPONSIBLE_AI_DISCLAIMER,
+      country: input.country,
+      totalProductOutput: input.totalProductOutput,
+    },
+    rows: rowDetails,
+    metrics: {
+      totalKg: total,
+      totalTonnes,
+      scope1Kg: scope1,
+      scope2Kg: scope2,
+      scope3Kg: scope3,
+      carbonIntensity: intensity,
+      cbamRisk,
+    },
+    recommendations,
+    citations,
   };
 }

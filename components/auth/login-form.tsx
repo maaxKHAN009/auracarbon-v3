@@ -184,9 +184,9 @@ export function LoginForm({ onLogin, onSwitchToRegister, onAdminSetup }: LoginFo
                 <br />
               </>
             )}
-            Default credentials: <br />
-            Email: <code className="text-[#00FF88]">demo@test.com</code> <br />
-            Password: <code className="text-[#00FF88]">password123</code>
+            Hackathon Demo Access (instant login): <br />
+            Email: <code className="text-[#00FF88]">demo@auracarbon.ai</code> <br />
+            Password: <code className="text-[#00FF88]">AuraDemo2026!</code>
           </p>
         </div>
       </GlassCard>

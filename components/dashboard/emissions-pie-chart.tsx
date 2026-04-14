@@ -1,53 +1,73 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { motion } from 'framer-motion';
 import { useCarbonStore } from '@/lib/store';
-import { calculateTotalEmissions } from '@/lib/carbon-engine';
+
+const PIE_COLORS = ['#00CCFF', '#00FF88', '#FF3366', '#FFCC00', '#7BDFF2', '#F1C0E8', '#B9FBC0'];
+
+interface MaterialEmissionSlice {
+  name: string;
+  value: number;
+  color: string;
+}
 
 export function EmissionsPieChart() {
   const { rows, factors, country } = useCarbonStore();
-  const [data, setData] = useState([
-    { name: 'Material (Scope 3)', value: 0, color: '#00CCFF' },
-    { name: 'Energy (Scope 2)', value: 0, color: '#00FF88' },
-    { name: 'Direct (Scope 1)', value: 0, color: '#FF3366' },
-  ]);
-  const [totalEmissions, setTotalEmissions] = useState(0);
 
-  useEffect(() => {
-    if (factors) {
-      const { total, scope1, scope2, scope3 } = calculateTotalEmissions(rows, factors, country);
-      setTotalEmissions(total);
-      
-      if (total > 0) {
-        setData([
-          { name: 'Material (Scope 3)', value: scope3, color: '#00CCFF' },
-          { name: 'Energy (Scope 2)', value: scope2, color: '#00FF88' },
-          { name: 'Direct (Scope 1)', value: scope1, color: '#FF3366' },
-        ]);
+  const data = useMemo<MaterialEmissionSlice[]>(() => {
+    if (!factors || rows.length === 0) return [];
+
+    const materialTotals = new Map<string, number>();
+
+    rows.forEach((row) => {
+      if (!row.materialOrFuel || row.quantity <= 0) return;
+
+      let ef = 0;
+      if (row.process === 'Direct Burning' || row.process === 'Chemical Calcination') {
+        ef = factors.fuels[row.materialOrFuel] || factors.materials[row.materialOrFuel] || 0;
+      } else if (row.process === 'Electrical Grinding') {
+        ef = factors.grids[country] || 0;
       } else {
-        setData([
-          { name: 'Material (Scope 3)', value: 0, color: '#00CCFF' },
-          { name: 'Energy (Scope 2)', value: 0, color: '#00FF88' },
-          { name: 'Direct (Scope 1)', value: 0, color: '#FF3366' },
-        ]);
+        ef = factors.materials[row.materialOrFuel] || 0;
       }
-    }
+
+      let qty = row.quantity;
+      if (row.unit === 'Tons') qty = row.quantity * 1000;
+
+      const emissions = Math.max(0, qty * ef);
+      const key = row.materialOrFuel.trim();
+      materialTotals.set(key, (materialTotals.get(key) || 0) + emissions);
+    });
+
+    const slices = Array.from(materialTotals.entries())
+      .map(([name, value], index) => ({
+        name,
+        value,
+        color: PIE_COLORS[index % PIE_COLORS.length],
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    return slices;
   }, [rows, factors, country]);
+
+  const totalEmissions = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
+
+  const chartData = data.length > 0 ? data : [{ name: 'No emissions data', value: 1, color: '#4A4A4A' }];
+
   return (
     <GlassCard className="h-full flex flex-col" delay={0.3}>
       <div className="mb-4">
         <h3 className="text-sm font-medium text-white/60 tracking-wider uppercase">Emissions Breakdown</h3>
-        <p className="text-xs text-white/40 mt-1">Scope 1, 2, and 3 Distribution</p>
+        <p className="text-xs text-white/40 mt-1">Material/Fuel contribution to total emissions</p>
       </div>
       
       <div className="flex-1 min-h-[250px] relative">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data}
+              data={chartData}
               cx="50%"
               cy="50%"
               innerRadius={60}
@@ -59,11 +79,16 @@ export function EmissionsPieChart() {
               animationDuration={1500}
               animationEasing="ease-out"
             >
-              {data.map((entry, index) => (
+              {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
             <Tooltip 
+              formatter={(value) => {
+                const safeValue = typeof value === 'number' ? value : Number(value || 0);
+                const percent = totalEmissions > 0 ? (safeValue / totalEmissions) * 100 : 0;
+                return [`${safeValue.toFixed(2)} kg CO2e (${percent.toFixed(1)}%)`, 'Contribution'];
+              }}
               contentStyle={{ 
                 backgroundColor: 'rgba(20, 20, 20, 0.8)', 
                 backdropFilter: 'blur(10px)',
@@ -91,6 +116,12 @@ export function EmissionsPieChart() {
           </div>
         </div>
       </div>
+
+      {data.length === 0 && (
+        <div className="mt-3 text-center text-xs text-white/40">
+          Add valid material/fuel rows with quantity to populate the chart.
+        </div>
+      )}
     </GlassCard>
   );
 }

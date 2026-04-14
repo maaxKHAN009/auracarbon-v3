@@ -6,6 +6,19 @@ import { loginUser } from '@/lib/auth-service';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
+const DEMO_EMAIL = 'demo@auracarbon.ai';
+const DEMO_PASSWORD = 'AuraDemo2026!';
+
+const DEMO_USER = {
+  id: 'demo-user',
+  email: DEMO_EMAIL,
+  companyName: 'AuraCarbon Demo Facility',
+  facilityType: 'Cement Plant',
+  country: 'Germany',
+  isAdmin: false,
+  two_fa_enabled: false,
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -16,6 +29,27 @@ export async function POST(request: NextRequest) {
         { error: 'Email and password are required' },
         { status: 400 }
       );
+    }
+
+    // Hackathon reviewer path: always-available demo account without approval flow
+    if (String(email).trim().toLowerCase() === DEMO_EMAIL && password === DEMO_PASSWORD) {
+      const demoResponse = NextResponse.json(
+        {
+          success: true,
+          user: DEMO_USER,
+          requires2FA: false,
+        },
+        { status: 200 }
+      );
+
+      demoResponse.cookies.set('auth_user', JSON.stringify(DEMO_USER), {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7,
+      });
+
+      return demoResponse;
     }
 
     const result = await loginUser({ email, password });
