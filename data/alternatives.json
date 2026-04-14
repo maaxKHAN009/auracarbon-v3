@@ -1,6 +1,6 @@
 {
   "e-crete": {
-    "category": "Cement & Construction",
+    "category": "Concrete",
     "title": "E-Crete",
     "alternative": "E-Crete geopolymer cement",
     "reductionPercent": 80,
@@ -16,7 +16,7 @@
     "limitations": "Limited regional availability; requires supply chain development; structural performance may vary by application type."
   },
   "oxacrete": {
-    "category": "Cement & Construction",
+    "category": "Concrete",
     "title": "Oxacrete",
     "alternative": "Oxacrete carbon-negative concrete",
     "reductionPercent": 90,
@@ -32,7 +32,7 @@
     "limitations": "Emerging technology with limited field data; higher material cost; curing time may extend project schedules; contractor experience varies."
   },
   "issb": {
-    "category": "Cement & Construction",
+    "category": "Construction",
     "title": "Interlocking Stabilized Soil Blocks (ISSB)",
     "alternative": "ISSB - interlocking stabilized soil blocks",
     "reductionPercent": 85,
@@ -48,7 +48,7 @@
     "limitations": "Availability depends on local manufacturing capacity; architectural aesthetics differ from fired bricks; durability in high-moisture environments requires validation."
   },
   "aect-ceb": {
-    "category": "Cement & Construction",
+    "category": "Construction",
     "title": "AECT CEB Machine",
     "alternative": "AECT Impact 2001A - Compressed Earth Block machine",
     "reductionPercent": 80,
@@ -64,7 +64,7 @@
     "limitations": "Capital investment for machinery (~$50-100K); soil quality-dependent; limited to certain climates; performance certification required for structural applications."
   },
   "g2e-biomass": {
-    "category": "Energy & Industrial Heat",
+    "category": "Energy",
     "title": "G2E Biomass Gasification",
     "alternative": "G2E Biomass Gasification Plant",
     "reductionPercent": 95,
@@ -80,7 +80,7 @@
     "limitations": "High capital cost ($200K+); requires consistent biomass feedstock; emissions accounting complex due to biogenic/biochar sequestration; air quality permits needed."
   },
   "cl-06-solar-thermal": {
-    "category": "Energy & Industrial Heat",
+    "category": "Energy",
     "title": "CL-06 Solar Thermal",
     "alternative": "CL-T-160 Trough - Solar thermal system",
     "reductionPercent": 76.9,
@@ -96,7 +96,7 @@
     "limitations": "Geographic limitation to high insolation regions; seasonal variability; requires thermal storage or gas backup; high upfront CAPEX ($150-300K)."
   },
   "lean-briqs": {
-    "category": "Energy & Industrial Heat",
+    "category": "Energy",
     "title": "Lean Briqs",
     "alternative": "Lean Briqs - compressed biomass briquettes",
     "reductionPercent": 100,
@@ -112,7 +112,7 @@
     "limitations": "Supply chain maturity varies by region; feedstock sustainability practices must be verified; ash handling/disposal procedures differ from coal; higher storage volume needed."
   },
   "biochar-maroc": {
-    "category": "Waste & Circular Economy",
+    "category": "Waste",
     "title": "BioChar Maroc",
     "alternative": "BioChar Maroc - agricultural biochar",
     "reductionPercent": 50,
@@ -128,7 +128,7 @@
     "limitations": "Long-term sequestration verification required; soil type dependent; benefits vary by climate; requires agronomic expertise; permanence timescale (100+ years) requires validation."
   },
   "reppie-waste-energy": {
-    "category": "Waste & Circular Economy",
+    "category": "Waste",
     "title": "Reppie Waste-to-Energy",
     "alternative": "Reppie Waste-to-Energy facility",
     "reductionPercent": 70,
@@ -144,7 +144,7 @@
     "limitations": "Requires large capital investment ($5M+); regulatory framework and grid interconnection agreements needed; long development timeline (2-3 years); feedstock quality variability."
   },
   "styro-densifiers": {
-    "category": "Waste & Circular Economy",
+    "category": "Waste",
     "title": "Styro-plastic Densifiers",
     "alternative": "Styro-plastic densifier - waste compaction system",
     "reductionPercent": 45,

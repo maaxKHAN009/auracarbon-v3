@@ -16,6 +16,7 @@ import { AccountSettings } from './account-settings';
 import { EmissionsTable } from './emissions-table';
 import { HotspotAnalyzer } from './hotspot-analyzer';
 import { CarbonIntensityGauge } from './carbon-intensity-gauge';
+import { ExportPanel } from './export-panel';
 import { MaterialSubstitutionSuggestions } from './material-substitution';
 import { ScenarioPlanner } from './scenario-planner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -209,6 +210,11 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
         </div>
         <div className="col-span-1 md:col-span-6">
           <CarbonIntensityGauge />
+        </div>
+
+        {/* Manual Bridge Export Panel */}
+        <div className="col-span-1 md:col-span-12">
+          <ExportPanel />
         </div>
 
         {/* Emissions Breakdown - Will expand to fill available space */}
