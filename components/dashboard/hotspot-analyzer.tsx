@@ -82,7 +82,7 @@ export function HotspotAnalyzer() {
   };
 
   return (
-    <GlassCard className="w-full h-[620px]" delay={0.25}>
+    <GlassCard className="w-full" delay={0.25}>
       <div className="mb-6">
         <h3 className="text-sm font-medium text-white/60 tracking-wider uppercase">Emission Hotspots</h3>
         <p className="text-xs text-white/40 mt-1">Scope-wise hotspot view (always visible)</p>

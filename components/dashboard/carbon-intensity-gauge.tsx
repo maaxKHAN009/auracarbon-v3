@@ -60,7 +60,7 @@ export function CarbonIntensityGauge() {
   const reduction = Math.max(0, ((INDUSTRY_AVERAGE - intensityData.intensity) / INDUSTRY_AVERAGE) * 100);
 
   return (
-    <GlassCard className="w-full h-[620px]" delay={0.3}>
+    <GlassCard className="w-full h-full" delay={0.3}>
       <div className="mb-6">
         <div>
           <h3 className="text-sm font-medium text-white/60 tracking-wider uppercase">Carbon Intensity Analysis</h3>
