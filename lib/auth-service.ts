@@ -311,7 +311,7 @@ export async function getPendingRegistrations() {
     const { data, error } = await supabaseServer
       .from('pending_registrations')
       .select('*')
-      .eq('status', 'pending')
+      .or('status.eq.pending,status.is.null')
       .order('created_at', { ascending: false });
 
     if (error) {

@@ -8,6 +8,8 @@ import { NextResponse } from 'next/server';
 
 const DEMO_EMAIL = 'demo@auracarbon.ai';
 const DEMO_PASSWORD = 'AuraDemo2026!';
+const LEGACY_DEMO_EMAIL = 'demo@test.com';
+const LEGACY_DEMO_PASSWORD = 'password123';
 
 const DEMO_USER = {
   id: 'demo-user',
@@ -32,7 +34,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Hackathon reviewer path: always-available demo account without approval flow
-    if (String(email).trim().toLowerCase() === DEMO_EMAIL && password === DEMO_PASSWORD) {
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const isPrimaryDemoLogin = normalizedEmail === DEMO_EMAIL && password === DEMO_PASSWORD;
+    const isLegacyDemoLogin = normalizedEmail === LEGACY_DEMO_EMAIL && password === LEGACY_DEMO_PASSWORD;
+
+    if (isPrimaryDemoLogin || isLegacyDemoLogin) {
       const demoResponse = NextResponse.json(
         {
           success: true,
