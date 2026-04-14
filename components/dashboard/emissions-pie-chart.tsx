@@ -84,7 +84,7 @@ export function EmissionsPieChart() {
         
         {/* Center overlay for 3D/depth effect */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-white/5 to-transparent backdrop-blur-sm border border-white/5 flex flex-col items-center justify-center">
+          <div className="w-40 h-40 rounded-full bg-gradient-to-br from-white/5 to-transparent backdrop-blur-sm border border-white/5 flex flex-col items-center justify-center">
             <span className="text-xs text-white/40 uppercase tracking-widest">Total</span>
             <span className="text-xl font-display font-bold">{totalEmissions > 0 ? (totalEmissions / 1000).toFixed(1) + 'k' : '0'}</span>
             <span className="text-[10px] text-white/40">kg CO₂e</span>
