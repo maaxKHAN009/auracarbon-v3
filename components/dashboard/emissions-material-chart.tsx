@@ -33,6 +33,13 @@ interface FactorInfo {
   factorUnit: string;
 }
 
+function formatCompactEmissions(value: number): string {
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(2)}k`;
+  return value.toFixed(2);
+}
+
 const MASS_UNITS = new Set(['Tons', 'kg']);
 const VOLUME_UNITS = new Set(['m3', 'liter']);
 const ENERGY_UNITS = new Set(['kWh']);
@@ -170,13 +177,13 @@ export function EmissionsPieChart() {
       </div>
 
       {slices.length === 0 ? (
-        <div className="min-h-[260px] flex items-center justify-center border border-dashed border-white/10 rounded-lg text-xs text-white/40 px-4 text-center">
+        <div className="min-h-[320px] flex items-center justify-center border border-dashed border-white/10 rounded-lg text-xs text-white/40 px-4 text-center">
           No contribution data yet. Add rows with compatible units and valid factors to render the chart.
         </div>
       ) : (
         <>
-          <div className="min-h-[260px] relative">
-            <ResponsiveContainer width="100%" height={260}>
+          <div className="min-h-[340px] relative">
+            <ResponsiveContainer width="100%" height={340}>
               <PieChart>
                 <Pie
                   data={slices}
@@ -184,8 +191,8 @@ export function EmissionsPieChart() {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  innerRadius={58}
-                  outerRadius={95}
+                  innerRadius={80}
+                  outerRadius={132}
                   paddingAngle={2}
                   stroke="none"
                 >
@@ -197,8 +204,10 @@ export function EmissionsPieChart() {
                   formatter={(value, _name, entry) => {
                     const numeric = typeof value === 'number' ? value : Number(value || 0);
                     const pct = (entry?.payload?.percentage || 0) as number;
-                    return [`${numeric.toFixed(2)} kg CO2e (${pct.toFixed(1)}%)`, 'Contribution'];
+                    return [`${formatCompactEmissions(numeric)} kg CO2e (${pct.toFixed(1)}%)`, 'Contribution'];
                   }}
+                  position={{ x: 20, y: 20 }}
+                  allowEscapeViewBox={{ x: true, y: true }}
                   contentStyle={{
                     backgroundColor: 'rgba(20, 20, 20, 0.9)',
                     border: '1px solid rgba(255,255,255,0.12)',
@@ -211,9 +220,9 @@ export function EmissionsPieChart() {
             </ResponsiveContainer>
 
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-36 h-36 rounded-full bg-black/35 border border-white/10 flex flex-col items-center justify-center">
+              <div className="w-44 h-44 rounded-full bg-black/35 border border-white/10 flex flex-col items-center justify-center">
                 <span className="text-[10px] text-white/50 uppercase tracking-widest">Total</span>
-                <span className="text-lg font-display font-semibold text-white">{totalEmissions.toFixed(1)}</span>
+                <span className="text-2xl font-display font-semibold text-white">{formatCompactEmissions(totalEmissions)}</span>
                 <span className="text-[10px] text-white/50">kg CO2e</span>
               </div>
             </div>
