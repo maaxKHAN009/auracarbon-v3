@@ -10,7 +10,34 @@ export function HotspotAnalyzer() {
   const { rows, factors, country } = useCarbonStore();
 
   const hotspots = useMemo(() => {
-    if (!factors || rows.length === 0) return [];
+    if (!factors || rows.length === 0) {
+      return [
+        {
+          name: 'Scope 1 (Direct Combustion)',
+          value: 0,
+          percentage: 0,
+          color: '#FF3366',
+          icon: '🔥',
+          description: 'Direct burning of fuels',
+        },
+        {
+          name: 'Scope 2 (Grid Electricity)',
+          value: 0,
+          percentage: 0,
+          color: '#00FF88',
+          icon: '⚡',
+          description: 'Purchased electricity',
+        },
+        {
+          name: 'Scope 3 (Supply Chain)',
+          value: 0,
+          percentage: 0,
+          color: '#00CCFF',
+          icon: '📦',
+          description: 'Raw materials & upstream',
+        },
+      ];
+    }
 
     const { total, scope1, scope2, scope3 } = calculateTotalEmissions(rows, factors, country);
 
@@ -39,9 +66,7 @@ export function HotspotAnalyzer() {
         icon: '📦',
         description: 'Raw materials & upstream',
       },
-    ]
-      .filter(s => s.value > 0)
-      .sort((a, b) => b.value - a.value);
+    ];
 
     return scopeData;
   }, [rows, factors, country]);
@@ -56,26 +81,16 @@ export function HotspotAnalyzer() {
     }
   };
 
-  if (hotspots.length === 0) {
-    return (
-      <GlassCard className="w-full" delay={0.25}>
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-white/60 tracking-wider uppercase">Emission Hotspots</h3>
-          <p className="text-xs text-white/40 mt-1">Top drivers of emissions</p>
-        </div>
-        <div className="text-center py-8 text-white/40 text-sm">
-          Add materials to identify hotspots
-        </div>
-      </GlassCard>
-    );
-  }
-
   return (
-    <GlassCard className="w-full" delay={0.25}>
+    <GlassCard className="w-full h-[620px]" delay={0.25}>
       <div className="mb-6">
         <h3 className="text-sm font-medium text-white/60 tracking-wider uppercase">Emission Hotspots</h3>
-        <p className="text-xs text-white/40 mt-1">Top drivers of emissions with recommendations</p>
+        <p className="text-xs text-white/40 mt-1">Scope-wise hotspot view (always visible)</p>
       </div>
+
+      {rows.length === 0 && (
+        <div className="mb-4 text-xs text-white/40">Add materials to populate non-zero hotspot values.</div>
+      )}
 
       <div className="space-y-4">
         {hotspots.map((hotspot, idx) => (
@@ -113,19 +128,22 @@ export function HotspotAnalyzer() {
 
             {/* Impact Indicator */}
             <div className="mt-3 flex items-center gap-2 text-xs">
-              {idx === 0 && (
+              {hotspot.value === 0 && (
+                <span className="text-white/50">No measurable contribution in current input set</span>
+              )}
+              {hotspot.value > 0 && idx === 0 && (
                 <>
                   <AlertCircle className="w-4 h-4 text-[#FF3366]" />
                   <span className="text-[#FF3366] font-medium">Highest impact - Focus here first</span>
                 </>
               )}
-              {idx === 1 && (
+              {hotspot.value > 0 && idx === 1 && (
                 <>
                   <TrendingUp className="w-4 h-4 text-[#FFCC00]" />
                   <span className="text-white/60">Secondary target - Address after priority</span>
                 </>
               )}
-              {idx > 1 && (
+              {hotspot.value > 0 && idx > 1 && (
                 <span className="text-white/60">Lower priority - Optimize after main sources</span>
               )}
             </div>

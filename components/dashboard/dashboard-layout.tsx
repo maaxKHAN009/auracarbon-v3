@@ -5,14 +5,12 @@ import { CarbonVelocity } from './carbon-velocity';
 import { EmissionsPieChart } from './emissions-pie-chart';
 import { CbamScore } from './cbam-score';
 import { CarbonPricesWidget } from './carbon-prices-widget';
-import { PredictiveOptimization } from './predictive-optimization';
 import { RecipeBuilder } from './recipe-builder';
 import { AdminPanel } from './admin-panel';
 import { AdminApprovalPanel } from './admin-approval-panel';
 import { UserManagementPanel } from './user-management-panel';
 import { AuditLogsViewer } from './audit-logs-viewer';
 import { AccountSettings } from './account-settings';
-import { EmissionsTable } from './emissions-table';
 import { HotspotAnalyzer } from './hotspot-analyzer';
 import { CarbonIntensityGauge } from './carbon-intensity-gauge';
 import { ExportPanel } from './export-panel';
@@ -193,11 +191,8 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
         </div>
 
         {/* Bottom Row: Charts & Analytics - Dynamic sizing */}
-        <div className="col-span-1 md:col-span-6 min-h-[300px]">
+        <div className="col-span-1 md:col-span-12 min-h-[300px]">
           <EmissionsPieChart />
-        </div>
-        <div className="col-span-1 md:col-span-6 min-h-[300px]">
-          <PredictiveOptimization />
         </div>
 
         {/* Analysis Row - Full Width when needed */}
@@ -211,11 +206,6 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
         {/* Manual Bridge Export Panel */}
         <div className="col-span-1 md:col-span-12">
           <ExportPanel />
-        </div>
-
-        {/* Emissions Breakdown - Will expand to fill available space */}
-        <div className="col-span-1 md:col-span-12 min-h-[200px]">
-          <EmissionsTable />
         </div>
 
         {/* Material Substitution */}
