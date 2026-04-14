@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { CarbonVelocity } from './carbon-velocity';
-import { CreditWallet } from './credit-wallet';
 import { EmissionsPieChart } from './emissions-pie-chart';
 import { CbamScore } from './cbam-score';
 import { CarbonPricesWidget } from './carbon-prices-widget';
@@ -136,13 +135,10 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
       {/* Main Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-max">
         {/* Top Row: Key Metrics - Shrink when empty, grow with content */}
-        <div className="col-span-1 md:col-span-4">
+        <div className="col-span-1 md:col-span-6">
           <CarbonVelocity />
         </div>
-        <div className="col-span-1 md:col-span-4">
-          <CreditWallet />
-        </div>
-        <div className="col-span-1 md:col-span-4">
+        <div className="col-span-1 md:col-span-6">
           <CbamScore />
         </div>
 

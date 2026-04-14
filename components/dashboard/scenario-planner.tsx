@@ -3,11 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { useCarbonStore } from '@/lib/store';
-import { calculateTotalEmissions } from '@/lib/carbon-engine';
+import { calculateGreenCredits, calculateTotalEmissions } from '@/lib/carbon-engine';
 import { Zap } from 'lucide-react';
 
 export function ScenarioPlanner() {
-  const { rows, factors, country, totalProductOutput } = useCarbonStore();
+  const { rows, factors, country, vcmValue, vcmCurrency } = useCarbonStore();
   const [reductionPercentages, setReductionPercentages] = useState<Record<string, number>>({});
 
   const currentEmissions = useMemo(() => {
@@ -50,6 +50,8 @@ export function ScenarioPlanner() {
 
   const savings = Math.max(0, currentEmissions - projectedEmissions);
   const savingsPercent = currentEmissions > 0 ? (savings / currentEmissions) * 100 : 0;
+  const potentialCredits = savings;
+  const potentialCreditValue = calculateGreenCredits(potentialCredits, vcmValue);
 
   const getUniqueMaterials = () => {
     return [...new Set(rows.map(r => r.materialOrFuel).filter(Boolean))];
@@ -113,6 +115,30 @@ export function ScenarioPlanner() {
           </div>
         </div>
       )}
+
+      {/* Carbon Credits Outcome */}
+      <div className="mb-6 p-4 rounded-lg bg-[#00CCFF]/10 border border-[#00CCFF]/30">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <div className="text-xs text-white/60 uppercase tracking-wider mb-1">Potential Credits</div>
+            <div className="text-xl font-bold text-[#00CCFF]">{potentialCredits.toFixed(2)} tCO2e</div>
+          </div>
+          <div>
+            <div className="text-xs text-white/60 uppercase tracking-wider mb-1">VCM Price Used</div>
+            <div className="text-xl font-bold text-white">{vcmCurrency} {vcmValue.toFixed(2)} / ton</div>
+          </div>
+          <div>
+            <div className="text-xs text-white/60 uppercase tracking-wider mb-1">Potential Credit Value</div>
+            <div className="text-xl font-bold text-[#00FF88]">{vcmCurrency} {potentialCreditValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+          </div>
+        </div>
+        <p className="text-xs text-white/50 mt-3">
+          Credits are estimated from the delta between current and scenario emissions. Final issuance depends on methodology, verification, and registry approval.
+        </p>
+        <p className="text-xs text-[#FFCC00]/90 mt-2">
+          Advisory: Actual credits and value may differ by location, grid mix, technology performance, feedstock quality, project boundary definitions, local policy/regulation, registry methodology, and market price volatility.
+        </p>
+      </div>
 
       {/* Sliders */}
       <div className="space-y-6">
