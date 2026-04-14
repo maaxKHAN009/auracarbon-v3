@@ -26,7 +26,9 @@ export function ScenarioPlanner() {
       setVcmCurrency(targetCurrency);
       setVcmValue(Number(converted.toFixed(4)));
     }
-  }, [country, vcmCurrency, vcmValue, setVcmCurrency, setVcmValue]);
+    // Intentionally only react to country changes so users can manually override currency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country]);
 
   useEffect(() => {
     if (vcmValue <= 0) {
