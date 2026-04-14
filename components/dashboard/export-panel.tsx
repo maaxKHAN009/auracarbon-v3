@@ -7,26 +7,86 @@ import { GlassCard } from '@/components/ui/glass-card';
 import { buildIndustrialCarbonContextReport } from '@/lib/report-engine';
 import { useCarbonStore } from '@/lib/store';
 
-function toPdf(reportText: string): Blob {
+function toPdf(reportText: string, generatedAtIso: string): Blob {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  const margin = 36;
+  const margin = 40;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const maxWidth = pageWidth - margin * 2;
-  const lines = doc.splitTextToSize(reportText, maxWidth);
+  const lines = reportText.split('\n');
 
-  doc.setFont('courier', 'normal');
-  doc.setFontSize(9);
+  const writeFooter = (pageNum: number) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`AuraCarbon v3 | Decision-Support Artifact | Generated: ${generatedAtIso}`, margin, pageHeight - 16);
+    doc.text(`Page ${pageNum}`, pageWidth - margin, pageHeight - 16, { align: 'right' });
+  };
 
   let y = margin;
-  lines.forEach((line: string) => {
-    if (y > pageHeight - margin) {
+  let pageNum = 1;
+
+  for (const rawLine of lines) {
+    const line = rawLine ?? '';
+
+    let fontSize = 10;
+    let fontStyle: 'normal' | 'bold' = 'normal';
+    let lineGap = 13;
+
+    if (line.startsWith('# ')) {
+      fontSize = 15;
+      fontStyle = 'bold';
+      lineGap = 20;
+    } else if (line.startsWith('## ')) {
+      fontSize = 12;
+      fontStyle = 'bold';
+      lineGap = 16;
+    } else if (line.startsWith('### ')) {
+      fontSize = 11;
+      fontStyle = 'bold';
+      lineGap = 14;
+    } else if (line.startsWith('---')) {
+      if (y > pageHeight - margin - 24) {
+        writeFooter(pageNum);
+        doc.addPage();
+        pageNum += 1;
+        y = margin;
+      }
+      doc.setDrawColor(180, 180, 180);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 12;
+      continue;
+    }
+
+    const cleaned = line
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/^#{1,3}\s+/, '');
+
+    const wrapped = doc.splitTextToSize(cleaned, maxWidth);
+    const neededHeight = Math.max(lineGap, wrapped.length * lineGap);
+
+    if (y + neededHeight > pageHeight - margin - 22) {
+      writeFooter(pageNum);
       doc.addPage();
+      pageNum += 1;
       y = margin;
     }
-    doc.text(line, margin, y);
-    y += 12;
-  });
+
+    doc.setFont('helvetica', fontStyle);
+    doc.setFontSize(fontSize);
+    doc.setTextColor(20, 20, 20);
+
+    wrapped.forEach((segment: string) => {
+      doc.text(segment, margin, y);
+      y += lineGap;
+    });
+
+    if (cleaned.length === 0) {
+      y += 4;
+    }
+  }
+
+  writeFooter(pageNum);
 
   return doc.output('blob');
 }
@@ -60,7 +120,7 @@ export function ExportPanel() {
         country,
         totalProductOutput,
       });
-      const pdfBlob = toPdf(report.markdown);
+      const pdfBlob = toPdf(report.markdown, report.timestampIso);
       const stamp = report.timestampIso.split('T')[0];
       downloadBlob(pdfBlob, `Industrial-Carbon-Context-Report-${stamp}.pdf`);
     } finally {

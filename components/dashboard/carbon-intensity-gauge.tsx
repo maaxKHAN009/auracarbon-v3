@@ -1,65 +1,16 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { useCarbonStore } from '@/lib/store';
 import { calculateTotalEmissions } from '@/lib/carbon-engine';
-import { TrendingDown, TrendingUp, Download } from 'lucide-react';
-import { generatePDFReport, downloadPDF } from '@/lib/pdf-generator';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 
 const EU_BENCHMARK = 0.5; // tCO2e per ton of product
 const INDUSTRY_AVERAGE = 0.65;
 
 export function CarbonIntensityGauge() {
   const { rows, factors, country, totalProductOutput } = useCarbonStore();
-  const [downloading, setDownloading] = useState(false);
-
-  const handleDownloadReport = async () => {
-    if (!factors || rows.length === 0) return;
-    
-    setDownloading(true);
-    try {
-      const { total, scope1, scope2, scope3 } = calculateTotalEmissions(rows, factors, country);
-      
-      const reportData = {
-        country,
-        productOutput: totalProductOutput || 1,
-        rows: rows.map(row => {
-          const emissionFactor = 
-            factors.materials[row.materialOrFuel] ||
-            factors.fuels[row.materialOrFuel] ||
-            factors.grids[row.materialOrFuel] ||
-            0;
-          
-          const emissions = (row.quantity * 1000 * emissionFactor) / 1; // kg CO2e
-          
-          return {
-            id: row.id,
-            materialOrFuel: row.materialOrFuel,
-            quantity: row.quantity,
-            unit: row.unit,
-            process: row.process,
-            emissions,
-          };
-        }),
-        totals: {
-          scope1,
-          scope2,
-          scope3,
-          total,
-          intensity: totalProductOutput > 0 ? (total / 1000) / totalProductOutput : 0,
-        },
-        generatedAt: new Date().toLocaleString(),
-      };
-      
-      const blob = await generatePDFReport(reportData);
-      downloadPDF(blob, `AuraCarbon-Report-${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('Failed to generate PDF:', error);
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   const intensityData = useMemo(() => {
     if (!factors || rows.length === 0 || totalProductOutput === 0) {
@@ -110,19 +61,11 @@ export function CarbonIntensityGauge() {
 
   return (
     <GlassCard className="w-full" delay={0.3}>
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-6">
         <div>
           <h3 className="text-sm font-medium text-white/60 tracking-wider uppercase">Carbon Intensity Analysis</h3>
           <p className="text-xs text-white/40 mt-1">Emissions per unit of product output</p>
         </div>
-        <button
-          onClick={handleDownloadReport}
-          disabled={downloading || rows.length === 0}
-          className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          title="Download PDF Report"
-        >
-          <Download size={18} className="text-white/60 hover:text-white" />
-        </button>
       </div>
 
       {intensityData.status === 'idle' ? (
