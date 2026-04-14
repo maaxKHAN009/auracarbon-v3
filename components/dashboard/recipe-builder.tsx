@@ -83,7 +83,7 @@ export function RecipeBuilder() {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/5 p-4 rounded-lg border border-white/10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black p-4 rounded-lg border border-white/10">
         <div>
           <label 
             htmlFor="country-select"

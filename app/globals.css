@@ -32,6 +32,20 @@
     font-family: var(--font-sans), sans-serif;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
+
+  /* Keep all dropdown option menus readable and theme-consistent across the UI */
+  select option,
+  select optgroup {
+    background-color: #00d9c0 !important;
+    color: #0a0a0a !important;
+  }
+
+  select option:checked,
+  select option:hover,
+  select option:focus {
+    background-color: #00ff88 !important;
+    color: #0a0a0a !important;
+  }
 }
 
 @layer utilities {

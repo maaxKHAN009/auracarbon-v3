@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { CarbonVelocity } from './carbon-velocity';
-import { EmissionsPieChart } from './emissions-pie-chart';
+import { EmissionsPieChart } from './emissions-material-chart';
 import { CbamScore } from './cbam-score';
 import { CarbonPricesWidget } from './carbon-prices-widget';
 import { FactorsReferencePanel } from './factors-reference-panel';
@@ -31,6 +31,7 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminSection, setAdminSection] = useState<'factors' | 'approvals' | 'users' | 'audit'>('factors');
   const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'factors'>('dashboard');
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
 
   useEffect(() => {
@@ -174,7 +175,33 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
         </div>
       </header>
 
+      <div className="mb-6 flex items-center gap-2">
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            activeTab === 'dashboard' ? 'bg-[#00FF88]/20 text-[#00FF88]' : 'bg-white/5 text-white/60 hover:text-white'
+          }`}
+        >
+          Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab('factors')}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            activeTab === 'factors' ? 'bg-[#00CCFF]/20 text-[#00CCFF]' : 'bg-white/5 text-white/60 hover:text-white'
+          }`}
+        >
+          Emission Factors & Sources
+        </button>
+      </div>
+
       {/* Main Grid */}
+      {activeTab === 'factors' ? (
+        <div className="grid grid-cols-1 gap-6 auto-rows-max">
+          <div className="col-span-1">
+            <FactorsReferencePanel />
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-max">
         {/* Top Row: Key Metrics - Shrink when empty, grow with content */}
         <div className="col-span-1 md:col-span-6">
@@ -234,11 +261,6 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
           <CarbonPricesWidget />
         </div>
 
-        {/* User-facing Emission Factor References */}
-        <div className="col-span-1 md:col-span-12">
-          <FactorsReferencePanel />
-        </div>
-
         {/* Bottom Row: Charts & Analytics - Dynamic sizing */}
         <div className="col-span-1 md:col-span-12 min-h-[300px]">
           <EmissionsPieChart />
@@ -252,11 +274,6 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
           <CarbonIntensityGauge />
         </div>
 
-        {/* Manual Bridge Export Panel */}
-        <div className="col-span-1 md:col-span-12">
-          <ExportPanel />
-        </div>
-
         {/* Material Substitution */}
         <div className="col-span-1 md:col-span-12">
           <MaterialSubstitutionSuggestions />
@@ -266,7 +283,13 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
         <div className="col-span-1 md:col-span-12">
           <ScenarioPlanner />
         </div>
+
+        {/* Manual Bridge Export Panel */}
+        <div className="col-span-1 md:col-span-12">
+          <ExportPanel />
+        </div>
       </div>
+      )}
     </div>
   );
 }
