@@ -15,6 +15,20 @@ export interface FactorsData {
   materials: Record<string, number>;
   fuels: Record<string, number>;
   grids: Record<string, number>;
+  factorUnits?: {
+    materials?: Record<string, string>;
+    fuels?: Record<string, string>;
+    grids?: Record<string, string>;
+  };
+  standardFactors?: {
+    stationaryCombustion?: Array<Record<string, string | number>>;
+    solidFuels?: Array<Record<string, string | number>>;
+    electricityGrid?: Array<Record<string, string | number>>;
+    transportation?: Array<Record<string, string | number>>;
+    industrialMaterials?: Array<Record<string, string | number>>;
+    gwp?: Array<Record<string, string | number>>;
+    sourceReferences?: string[];
+  };
 }
 
 interface CarbonStore {

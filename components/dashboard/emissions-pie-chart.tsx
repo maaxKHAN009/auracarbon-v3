@@ -12,6 +12,7 @@ interface MaterialEmissionSlice {
   value: number;
   color: string;
   percentage: number;
+  hasFactor: boolean;
 }
 
 export function EmissionsPieChart() {
@@ -39,7 +40,8 @@ export function EmissionsPieChart() {
 
       const emissions = Math.max(0, qty * ef);
       const key = row.materialOrFuel.trim();
-      materialTotals.set(key, (materialTotals.get(key) || 0) + emissions);
+      const current = materialTotals.get(key) || 0;
+      materialTotals.set(key, current + emissions);
     });
 
     const rawSlices = Array.from(materialTotals.entries())
@@ -47,8 +49,8 @@ export function EmissionsPieChart() {
         name,
         value,
         color: PIE_COLORS[index % PIE_COLORS.length],
+        hasFactor: value > 0,
       }))
-      .filter((item) => item.value > 0)
       .sort((a, b) => b.value - a.value);
 
     const total = rawSlices.reduce((sum, item) => sum + item.value, 0);
@@ -62,7 +64,10 @@ export function EmissionsPieChart() {
 
   const totalEmissions = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
 
-  const chartData = data.length > 0 ? data : [{ name: 'No emissions data', value: 1, color: '#4A4A4A', percentage: 0 }];
+  const positiveData = data.filter((item) => item.value > 0);
+  const chartData = positiveData.length > 0
+    ? positiveData
+    : [{ name: 'No emissions data', value: 1, color: '#4A4A4A', percentage: 0, hasFactor: false }];
 
   return (
     <GlassCard className="h-full flex flex-col" delay={0.3}>
@@ -145,6 +150,11 @@ export function EmissionsPieChart() {
               </div>
             </div>
           ))}
+          {data.some((item) => !item.hasFactor) && (
+            <div className="text-[11px] text-[#FFCC00] mt-2">
+              Some selected items have no mapped emission factor and currently contribute 0. Add/edit factors in Admin Panel to enable those calculations.
+            </div>
+          )}
           {data.length > 8 && (
             <div className="text-[11px] text-white/40">+{data.length - 8} more items in chart legend</div>
           )}

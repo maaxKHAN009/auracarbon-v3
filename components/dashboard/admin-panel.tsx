@@ -43,6 +43,33 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
 
   if (!localFactors) return null;
 
+  const getDefaultUnitForCategory = (category: 'materials' | 'fuels' | 'grids', factorName: string): string => {
+    if (category === 'materials') return 'kg';
+    if (category === 'grids') return 'kWh';
+    if (factorName === 'CNG') return 'm3';
+    const energyFuels = new Set([
+      'Natural Gas',
+      'Bituminous Coal',
+      'Sub-bituminous Coal',
+      'Lignite',
+      'Anthracite Coal',
+      'Coal (Average Power)',
+      'Petroleum Coke (Solid)',
+      'Municipal Solid Waste',
+      'Tires',
+      'Plastics',
+      'Wood & Wood Residuals',
+    ]);
+    return energyFuels.has(factorName) ? 'kWh' : 'liter';
+  };
+
+  const getFactorUnit = (category: 'materials' | 'fuels' | 'grids', factorName: string): string => {
+    return (
+      localFactors.factorUnits?.[category]?.[factorName] ||
+      getDefaultUnitForCategory(category, factorName)
+    );
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     await updateFactors(localFactors);
@@ -76,6 +103,13 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
         [category]: {
           ...prev[category],
           [name]: value
+        },
+        factorUnits: {
+          ...(prev.factorUnits || {}),
+          [category]: {
+            ...(prev.factorUnits?.[category] || {}),
+            [name]: getDefaultUnitForCategory(category, name)
+          }
         }
       };
     });
@@ -88,14 +122,43 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
       if (!prev) return prev;
       const newCategory = { ...prev[category] };
       delete newCategory[key];
+      const newFactorUnitsCategory = { ...(prev.factorUnits?.[category] || {}) };
+      delete newFactorUnitsCategory[key];
       return {
         ...prev,
-        [category]: newCategory
+        [category]: newCategory,
+        factorUnits: {
+          ...(prev.factorUnits || {}),
+          [category]: newFactorUnitsCategory
+        }
       };
     });
   };
 
-  const renderCategory = (title: string, category: 'materials' | 'fuels' | 'grids', unit: string) => (
+  const getSourceForFactor = (category: 'materials' | 'fuels' | 'grids', name: string): string => {
+    if (!localFactors?.standardFactors) return 'Internal default';
+
+    if (category === 'grids') {
+      const row = (localFactors.standardFactors.electricityGrid || []).find((item) =>
+        String(item.region || '').toLowerCase() === name.toLowerCase()
+      );
+      return row ? String(row.source || 'Standard source') : 'Country table default';
+    }
+
+    const pools = [
+      ...(localFactors.standardFactors.stationaryCombustion || []),
+      ...(localFactors.standardFactors.solidFuels || []),
+      ...(localFactors.standardFactors.industrialMaterials || []),
+    ];
+
+    const row = pools.find((item) =>
+      String(item.name || item.material || '').toLowerCase() === name.toLowerCase()
+    );
+
+    return row ? String(row.source || 'Standard source') : 'User/admin custom';
+  };
+
+  const renderCategory = (title: string, category: 'materials' | 'fuels' | 'grids') => (
     <div className="mb-8">
       <div className="flex justify-between items-center mb-4">
         <h4 className="text-sm font-medium text-white/80 uppercase tracking-wider">{title}</h4>
@@ -106,28 +169,45 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
           <Plus className="w-3 h-3" /> Add New
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {Object.entries(localFactors[category]).map(([key, value]) => (
-          <div key={key} className="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-white/5">
-            <span className="text-sm text-white/80 truncate pr-2" title={key}>{key}</span>
-            <div className="flex items-center gap-2">
-              <input 
-                type="number" 
-                value={value}
-                onChange={(e) => updateFactor(category, key, parseFloat(e.target.value) || 0)}
-                className="w-20 bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-right focus:outline-none focus:border-[#00CCFF]"
-                step="0.01"
-              />
-              <span className="text-xs text-white/40 w-8">{unit}</span>
-              <button 
-                onClick={() => removeFactor(category, key)}
-                className="text-[#FF3366]/60 hover:text-[#FF3366] transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        ))}
+      <div className="overflow-x-auto border border-white/10 rounded-lg">
+        <table className="w-full text-xs">
+          <thead className="bg-white/5">
+            <tr>
+              <th className="text-left px-3 py-2 text-white/60 uppercase tracking-wider">Factor</th>
+              <th className="text-right px-3 py-2 text-white/60 uppercase tracking-wider">Value</th>
+              <th className="text-left px-3 py-2 text-white/60 uppercase tracking-wider">Unit</th>
+              <th className="text-left px-3 py-2 text-white/60 uppercase tracking-wider">Source</th>
+              <th className="text-right px-3 py-2 text-white/60 uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(localFactors[category]).map(([key, value]) => (
+              <tr key={key} className="border-t border-white/5">
+                <td className="px-3 py-2 text-white/80">{key}</td>
+                <td className="px-3 py-2 text-right">
+                  <input
+                    type="number"
+                    value={value}
+                    onChange={(e) => updateFactor(category, key, parseFloat(e.target.value) || 0)}
+                    className="w-24 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-right text-white focus:outline-none focus:border-[#00CCFF]"
+                    step="0.00001"
+                  />
+                </td>
+                <td className="px-3 py-2 text-white/50">{getFactorUnit(category, key)}</td>
+                <td className="px-3 py-2 text-white/50">{getSourceForFactor(category, key)}</td>
+                <td className="px-3 py-2 text-right">
+                  <button
+                    onClick={() => removeFactor(category, key)}
+                    className="text-[#FF3366]/60 hover:text-[#FF3366] transition-colors"
+                    title="Remove factor"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -193,9 +273,9 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
           <p className="text-xs text-white/40 mt-2">These default values will be used when users open their credit wallet. They can modify them as needed.</p>
         </div>
 
-        {renderCategory('Materials (Scope 3)', 'materials', 'kg/kg')}
-        {renderCategory('Fuels (Scope 1)', 'fuels', 'kg/unit')}
-        {renderCategory('Grid Factors (Scope 2)', 'grids', 'kg/kWh')}
+        {renderCategory('Materials (Scope 3)', 'materials')}
+        {renderCategory('Fuels (Scope 1)', 'fuels')}
+        {renderCategory('Grid Factors (Scope 2)', 'grids')}
       </div>
     </GlassCard>
   );

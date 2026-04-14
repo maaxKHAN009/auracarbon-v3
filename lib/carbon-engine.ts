@@ -4,6 +4,14 @@ import { CBAM_THRESHOLDS, CALC } from './constants';
 /** GHG Scope classification per GHG Protocol */
 export type Scope = 'Scope 1' | 'Scope 2' | 'Scope 3';
 
+type ConversionType = 'mass' | 'volume' | 'energy';
+
+interface FactorResolution {
+  ef: number;
+  factorUnit: string;
+  scope: Scope;
+}
+
 /** Unit conversion factors to standard base units */
 export const UNIT_CONVERSIONS: Record<string, Record<string, number>> = {
   'mass': {
@@ -23,6 +31,80 @@ export const UNIT_CONVERSIONS: Record<string, Record<string, number>> = {
     'GJ': 277.778,
   }
 };
+
+const MASS_UNITS = new Set(Object.keys(UNIT_CONVERSIONS.mass));
+const VOLUME_UNITS = new Set(Object.keys(UNIT_CONVERSIONS.volume));
+const ENERGY_UNITS = new Set(Object.keys(UNIT_CONVERSIONS.energy));
+
+const ENERGY_BASED_FUELS = new Set([
+  'Natural Gas',
+  'Bituminous Coal',
+  'Sub-bituminous Coal',
+  'Lignite',
+  'Anthracite Coal',
+  'Coal (Average Power)',
+  'Petroleum Coke (Solid)',
+  'Municipal Solid Waste',
+  'Tires',
+  'Plastics',
+  'Wood & Wood Residuals',
+]);
+
+const VOLUME_GAS_FUELS = new Set(['CNG']);
+
+function getUnitCategory(unit: string): ConversionType | null {
+  if (MASS_UNITS.has(unit)) return 'mass';
+  if (VOLUME_UNITS.has(unit)) return 'volume';
+  if (ENERGY_UNITS.has(unit)) return 'energy';
+  return null;
+}
+
+function defaultFuelFactorUnit(fuelName: string): string {
+  if (VOLUME_GAS_FUELS.has(fuelName)) return 'm3';
+  if (ENERGY_BASED_FUELS.has(fuelName)) return 'kWh';
+  return 'liter';
+}
+
+function normalizeActivityToFactorUnit(quantity: number, inputUnit: string, factorUnit: string): number | null {
+  if (inputUnit === factorUnit) return quantity;
+
+  const fromCategory = getUnitCategory(inputUnit);
+  const toCategory = getUnitCategory(factorUnit);
+
+  if (!fromCategory || !toCategory || fromCategory !== toCategory) {
+    return null;
+  }
+
+  return convertUnit(quantity, inputUnit, factorUnit, fromCategory);
+}
+
+function resolveFactor(row: RecipeRow, factors: FactorsData, country: string): FactorResolution | null {
+  if (row.process === 'Electrical Grinding') {
+    const ef = factors.grids[country] || 0;
+    const factorUnit = factors.factorUnits?.grids?.[country] || 'kWh';
+    return { ef, factorUnit, scope: 'Scope 2' };
+  }
+
+  if (row.process === 'Raw Material') {
+    const ef = factors.materials[row.materialOrFuel] || 0;
+    const factorUnit = factors.factorUnits?.materials?.[row.materialOrFuel] || 'kg';
+    return { ef, factorUnit, scope: 'Scope 3' };
+  }
+
+  if (row.process === 'Direct Burning' || row.process === 'Chemical Calcination') {
+    if (Object.prototype.hasOwnProperty.call(factors.fuels, row.materialOrFuel)) {
+      const ef = factors.fuels[row.materialOrFuel] || 0;
+      const factorUnit = factors.factorUnits?.fuels?.[row.materialOrFuel] || defaultFuelFactorUnit(row.materialOrFuel);
+      return { ef, factorUnit, scope: 'Scope 1' };
+    }
+
+    const ef = factors.materials[row.materialOrFuel] || 0;
+    const factorUnit = factors.factorUnits?.materials?.[row.materialOrFuel] || 'kg';
+    return { ef, factorUnit, scope: 'Scope 1' };
+  }
+
+  return null;
+}
 
 /**
  * Convert quantity from one unit to another within the same category
@@ -175,31 +257,24 @@ export function calculateTotalEmissions(
   rows.forEach(row => {
     if (!row.materialOrFuel || row.quantity <= 0) return;
 
-    let ef = 0;
-    let scope: Scope = 'Scope 3';
+    const resolution = resolveFactor(row, factors, country);
+    if (!resolution) return;
 
-    // Determine emission factor and scope based on process type
-    if (row.process === 'Direct Burning' || row.process === 'Chemical Calcination') {
-      ef = factors.fuels[row.materialOrFuel] || factors.materials[row.materialOrFuel] || 0;
-      scope = 'Scope 1';
-    } else if (row.process === 'Electrical Grinding') {
-      ef = factors.grids[country] || 0;
-      scope = 'Scope 2';
-    } else if (row.process === 'Raw Material') {
-      ef = factors.materials[row.materialOrFuel] || 0;
-      scope = 'Scope 3';
+    const normalizedQty = normalizeActivityToFactorUnit(row.quantity, row.unit, resolution.factorUnit);
+    if (normalizedQty === null) {
+      console.warn(
+        `Skipping row ${row.id}: unit mismatch (${row.unit}) cannot be converted to factor unit (${resolution.factorUnit})`
+      );
+      return;
     }
 
-    // Convert quantity to standard unit (kg for mass, liter for volume, kWh for energy)
-    let qty = row.quantity;
-    if (row.unit === 'Tons') qty = row.quantity * 1000;
-    
-    const emissions = Math.max(0, qty * ef);
+    // Standard accounting equation: CO2e = Activity Data x Emission Factor x GWP
+    const emissions = Math.max(0, calculateEmissions(normalizedQty, resolution.ef, 1));
     total += emissions;
 
-    if (scope === 'Scope 1') scope1 += emissions;
-    if (scope === 'Scope 2') scope2 += emissions;
-    if (scope === 'Scope 3') scope3 += emissions;
+    if (resolution.scope === 'Scope 1') scope1 += emissions;
+    if (resolution.scope === 'Scope 2') scope2 += emissions;
+    if (resolution.scope === 'Scope 3') scope3 += emissions;
   });
 
   return {

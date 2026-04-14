@@ -5,6 +5,7 @@ import { CarbonVelocity } from './carbon-velocity';
 import { EmissionsPieChart } from './emissions-pie-chart';
 import { CbamScore } from './cbam-score';
 import { CarbonPricesWidget } from './carbon-prices-widget';
+import { FactorsReferencePanel } from './factors-reference-panel';
 import { RecipeBuilder } from './recipe-builder';
 import { AdminPanel } from './admin-panel';
 import { AdminApprovalPanel } from './admin-approval-panel';
@@ -231,6 +232,11 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
         {/* Carbon Prices Widget - Market Reference for VCM Pricing */}
         <div className="col-span-1 md:col-span-12">
           <CarbonPricesWidget />
+        </div>
+
+        {/* User-facing Emission Factor References */}
+        <div className="col-span-1 md:col-span-12">
+          <FactorsReferencePanel />
         </div>
 
         {/* Bottom Row: Charts & Analytics - Dynamic sizing */}
