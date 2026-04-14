@@ -221,7 +221,7 @@ export function RegistrationForm({ onRegistrationComplete, onSwitchToLogin }: Re
               value={formData.companyName}
               onChange={handleChange}
               placeholder="Your Company Ltd."
-              className={`w-full px-4 py-2 bg-white/5 border rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 transition-colors ${
+              className={`w-full px-4 py-2 bg-white/5 border rounded-lg text-black placeholder-white/40 focus:outline-none focus:ring-2 transition-colors ${
                 fieldError('companyName')
                   ? 'border-[#FF3366]/50 focus:ring-[#FF3366]/50'
                   : 'border-white/10 focus:ring-[#00CCFF]/50'
