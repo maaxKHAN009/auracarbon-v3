@@ -5,6 +5,7 @@ import { DashboardLayout } from '@/components/dashboard/dashboard-layout';
 import { LoginForm } from '@/components/auth/login-form';
 import { RegistrationForm } from '@/components/auth/registration-form';
 import { AdminSetupForm } from '@/components/auth/admin-setup-form';
+import { useCarbonStore } from '@/lib/store';
 
 const AUTH_STORAGE_KEY = 'auracarbon_auth_session';
 
@@ -23,6 +24,7 @@ function readCookieValue(name: string): string | null {
 }
 
 export default function Home() {
+  const setActiveUser = useCarbonStore((state) => state.setActiveUser);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [role, setRole] = useState<'client' | 'admin'>('client');
   const [userId, setUserId] = useState('');
@@ -69,6 +71,14 @@ export default function Home() {
       setAuthResolved(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setActiveUser(userId, userEmail);
+    } else {
+      setActiveUser();
+    }
+  }, [isAuthenticated, userId, userEmail, setActiveUser]);
 
   const handleLogin = (userRole: 'client' | 'admin', newUserId?: string, newUserEmail?: string) => {
     setRole(userRole);

@@ -11,6 +11,7 @@ interface MaterialEmissionSlice {
   name: string;
   value: number;
   color: string;
+  percentage: number;
 }
 
 export function EmissionsPieChart() {
@@ -41,20 +42,27 @@ export function EmissionsPieChart() {
       materialTotals.set(key, (materialTotals.get(key) || 0) + emissions);
     });
 
-    const slices = Array.from(materialTotals.entries())
+    const rawSlices = Array.from(materialTotals.entries())
       .map(([name, value], index) => ({
         name,
         value,
         color: PIE_COLORS[index % PIE_COLORS.length],
       }))
+      .filter((item) => item.value > 0)
       .sort((a, b) => b.value - a.value);
+
+    const total = rawSlices.reduce((sum, item) => sum + item.value, 0);
+    const slices = rawSlices.map((item) => ({
+      ...item,
+      percentage: total > 0 ? (item.value / total) * 100 : 0,
+    }));
 
     return slices;
   }, [rows, factors, country]);
 
   const totalEmissions = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
 
-  const chartData = data.length > 0 ? data : [{ name: 'No emissions data', value: 1, color: '#4A4A4A' }];
+  const chartData = data.length > 0 ? data : [{ name: 'No emissions data', value: 1, color: '#4A4A4A', percentage: 0 }];
 
   return (
     <GlassCard className="h-full flex flex-col" delay={0.3}>
@@ -120,6 +128,26 @@ export function EmissionsPieChart() {
       {data.length === 0 && (
         <div className="mt-3 text-center text-xs text-white/40">
           Add valid material/fuel rows with quantity to populate the chart.
+        </div>
+      )}
+
+      {data.length > 0 && (
+        <div className="mt-4 border-t border-white/10 pt-3 space-y-2">
+          {data.slice(0, 8).map((item) => (
+            <div key={item.name} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="text-white/80 truncate">{item.name}</span>
+              </div>
+              <div className="text-right ml-3 flex-shrink-0">
+                <span className="text-white/70">{item.value.toFixed(2)} kg</span>
+                <span className="text-white/40 ml-2">({item.percentage.toFixed(1)}%)</span>
+              </div>
+            </div>
+          ))}
+          {data.length > 8 && (
+            <div className="text-[11px] text-white/40">+{data.length - 8} more items in chart legend</div>
+          )}
         </div>
       )}
     </GlassCard>

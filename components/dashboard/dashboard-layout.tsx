@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CarbonVelocity } from './carbon-velocity';
 import { EmissionsPieChart } from './emissions-pie-chart';
 import { CbamScore } from './cbam-score';
@@ -30,6 +30,35 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminSection, setAdminSection] = useState<'factors' | 'approvals' | 'users' | 'audit'>('factors');
   const [showSettings, setShowSettings] = useState(false);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+
+  useEffect(() => {
+    if (role !== 'admin') {
+      setPendingApprovalsCount(0);
+      return;
+    }
+
+    let active = true;
+    const fetchPendingCount = async () => {
+      try {
+        const response = await fetch('/api/admin/approvals');
+        const data = await response.json();
+        if (active && data?.success) {
+          setPendingApprovalsCount(Array.isArray(data.registrations) ? data.registrations.length : 0);
+        }
+      } catch {
+        if (active) setPendingApprovalsCount(0);
+      }
+    };
+
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 30000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [role]);
+
   return (
     <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -52,9 +81,23 @@ export function DashboardLayout({ role, userId = '', userEmail = '', onLogout }:
         </div>
         
         <div className="flex items-center gap-4">
-          <button className="p-2 text-white/60 hover:text-white transition-colors rounded-full hover:bg-white/5">
-            <Bell className="w-5 h-5" />
-          </button>
+          {role === 'admin' && (
+            <button
+              className="relative p-2 text-white/60 hover:text-white transition-colors rounded-full hover:bg-white/5"
+              title="Pending approvals"
+              onClick={() => {
+                setShowAdminPanel(true);
+                setAdminSection('approvals');
+              }}
+            >
+              <Bell className="w-5 h-5" />
+              {pendingApprovalsCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#FF3366] text-white text-[10px] font-bold leading-[18px] text-center">
+                  {pendingApprovalsCount > 9 ? '+9' : pendingApprovalsCount}
+                </span>
+              )}
+            </button>
+          )}
           {role === 'admin' && (
             <div className="flex items-center gap-2">
               <button 

@@ -33,13 +33,15 @@ interface CarbonStore {
   setTotalProductOutput: (output: number) => void;
   setVcmValue: (value: number) => void;
   setVcmCurrency: (currency: string) => void;
+  setActiveUser: (userId?: string, userEmail?: string) => void;
   fetchFactors: () => Promise<void>;
   updateFactors: (newFactors: FactorsData) => Promise<void>;
   clearError: () => void;
   resetStore: () => void;
 }
 
-const STORAGE_KEY = 'auracarbon_store';
+const STORAGE_KEY_BASE = 'auracarbon_store';
+const AUTH_STORAGE_KEY = 'auracarbon_auth_session';
 const DEFAULT_STATE = {
   rows: [] as RecipeRow[],
   country: 'Germany',
@@ -51,11 +53,34 @@ const DEFAULT_STATE = {
   vcmCurrency: 'USD', // Default currency
 };
 
+function buildStorageKey(userId?: string, userEmail?: string): string {
+  if (userId && userId.trim()) return `${STORAGE_KEY_BASE}:user:${userId.trim()}`;
+  if (userEmail && userEmail.trim()) return `${STORAGE_KEY_BASE}:email:${userEmail.trim().toLowerCase()}`;
+  return `${STORAGE_KEY_BASE}:guest`;
+}
+
+function resolveInitialStorageKey(): string {
+  if (typeof window === 'undefined') return buildStorageKey();
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return buildStorageKey();
+    const parsed = JSON.parse(raw) as { userId?: string; userEmail?: string; isAuthenticated?: boolean };
+    if (parsed?.isAuthenticated) {
+      return buildStorageKey(parsed.userId, parsed.userEmail);
+    }
+  } catch {
+    // Ignore and fall back to guest scope.
+  }
+  return buildStorageKey();
+}
+
+let activeStorageKey = resolveInitialStorageKey();
+
 /** Load persisted store data from localStorage */
-const loadStorageState = (): Partial<CarbonStore> => {
+const loadStorageState = (storageKey: string): Partial<CarbonStore> => {
   if (typeof window === 'undefined') return {};
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
       const parsed = JSON.parse(stored);
       return {
@@ -76,14 +101,14 @@ const loadStorageState = (): Partial<CarbonStore> => {
 const persistStore = (rows: RecipeRow[], country: string, totalProductOutput: number, vcmValue: number, vcmCurrency: string) => {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows, country, totalProductOutput, vcmValue, vcmCurrency }));
+    localStorage.setItem(activeStorageKey, JSON.stringify({ rows, country, totalProductOutput, vcmValue, vcmCurrency }));
   } catch (error) {
     console.warn('Failed to persist state to localStorage:', error);
   }
 };
 
 export const useCarbonStore = create<CarbonStore>((set, get) => {
-  const initialState = loadStorageState();
+  const initialState = loadStorageState(activeStorageKey);
   
   return {
     rows: (initialState.rows as RecipeRow[]) || [],
@@ -184,9 +209,25 @@ export const useCarbonStore = create<CarbonStore>((set, get) => {
       return { vcmCurrency: currency };
     }),
 
+    setActiveUser: (userId, userEmail) => {
+      const nextKey = buildStorageKey(userId, userEmail);
+      activeStorageKey = nextKey;
+      const scopedState = loadStorageState(nextKey);
+
+      set((state) => ({
+        rows: (scopedState.rows as RecipeRow[]) || [],
+        country: (scopedState.country as string) || DEFAULT_STATE.country,
+        totalProductOutput: (scopedState.totalProductOutput as number) || DEFAULT_STATE.totalProductOutput,
+        vcmValue: (scopedState.vcmValue as number) || DEFAULT_STATE.vcmValue,
+        vcmCurrency: (scopedState.vcmCurrency as string) || DEFAULT_STATE.vcmCurrency,
+        factors: state.factors,
+        error: null,
+      }));
+    },
+
     resetStore: () => {
       if (typeof window !== 'undefined') {
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(activeStorageKey);
       }
       set(DEFAULT_STATE);
     },
