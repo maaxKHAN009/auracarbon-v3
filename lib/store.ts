@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { calculateAverageVcmPrice } from './constants';
 
 export type ProcessType = 'Direct Burning' | 'Electrical Grinding' | 'Chemical Calcination' | 'Raw Material';
 export type UnitType = 'Tons' | 'kg' | 'm3' | 'liter' | 'kWh';
@@ -63,7 +64,7 @@ const DEFAULT_STATE = {
   factors: null as FactorsData | null,
   error: null as string | null,
   isLoading: false,
-  vcmValue: 5.00, // Default VCM price
+  vcmValue: calculateAverageVcmPrice(), // Default VCM price (market average)
   vcmCurrency: 'USD', // Default currency
 };
 

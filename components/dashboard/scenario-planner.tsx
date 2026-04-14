@@ -1,14 +1,40 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { useCarbonStore } from '@/lib/store';
 import { calculateGreenCredits, calculateTotalEmissions } from '@/lib/carbon-engine';
 import { Zap } from 'lucide-react';
+import {
+  COUNTRY_CURRENCY_MAP,
+  CURRENCY_TO_USD_RATE,
+  MARKET_PRICES,
+  calculateAverageVcmPrice,
+  convertCurrency,
+} from '@/lib/constants';
 
 export function ScenarioPlanner() {
-  const { rows, factors, country, vcmValue, vcmCurrency } = useCarbonStore();
+  const { rows, factors, country, vcmValue, vcmCurrency, setVcmValue, setVcmCurrency } = useCarbonStore();
   const [reductionPercentages, setReductionPercentages] = useState<Record<string, number>>({});
+
+  const currencies = useMemo(() => Object.keys(CURRENCY_TO_USD_RATE), []);
+
+  useEffect(() => {
+    const targetCurrency = COUNTRY_CURRENCY_MAP[country] || 'USD';
+    if (vcmCurrency !== targetCurrency) {
+      const converted = convertCurrency(vcmValue, vcmCurrency, targetCurrency);
+      setVcmCurrency(targetCurrency);
+      setVcmValue(Number(converted.toFixed(4)));
+    }
+  }, [country, vcmCurrency, vcmValue, setVcmCurrency, setVcmValue]);
+
+  useEffect(() => {
+    if (vcmValue <= 0) {
+      const baseAverageUsd = calculateAverageVcmPrice();
+      const convertedDefault = convertCurrency(baseAverageUsd, 'USD', vcmCurrency);
+      setVcmValue(Number(convertedDefault.toFixed(4)));
+    }
+  }, [vcmValue, vcmCurrency, setVcmValue]);
 
   const currentEmissions = useMemo(() => {
     if (!factors) return 0;
@@ -118,6 +144,69 @@ export function ScenarioPlanner() {
 
       {/* Carbon Credits Outcome */}
       <div className="mb-6 p-4 rounded-lg bg-[#00CCFF]/10 border border-[#00CCFF]/30">
+        <div className="mb-4 p-3 rounded-lg bg-black/20 border border-white/10">
+          <div className="text-xs text-white/60 uppercase tracking-wider mb-2">Adjust Green Credit Price</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs text-white/50 mb-1">Price per ton</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={Number.isFinite(vcmValue) ? vcmValue : 0}
+                onChange={(e) => setVcmValue(Math.max(0, Number(e.target.value) || 0))}
+                className="w-full bg-black/20 border border-white/10 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:border-[#00CCFF]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-white/50 mb-1">Currency</label>
+              <select
+                value={vcmCurrency}
+                onChange={(e) => {
+                  const nextCurrency = e.target.value;
+                  const converted = convertCurrency(vcmValue, vcmCurrency, nextCurrency);
+                  setVcmCurrency(nextCurrency);
+                  setVcmValue(Number(converted.toFixed(4)));
+                }}
+                className="w-full bg-black/20 border border-white/10 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:border-[#00CCFF]"
+              >
+                {currencies.map((curr) => (
+                  <option key={curr} value={curr}>{curr}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-white/50 mb-1">Country-aligned default</label>
+              <button
+                onClick={() => {
+                  const targetCurrency = COUNTRY_CURRENCY_MAP[country] || 'USD';
+                  const defaultInTarget = convertCurrency(calculateAverageVcmPrice(), 'USD', targetCurrency);
+                  setVcmCurrency(targetCurrency);
+                  setVcmValue(Number(defaultInTarget.toFixed(4)));
+                }}
+                className="w-full bg-[#00CCFF]/20 border border-[#00CCFF]/30 rounded-md py-2 px-3 text-[#00CCFF] text-sm hover:bg-[#00CCFF]/30 transition-colors"
+              >
+                Use Market Average
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {MARKET_PRICES.map((priceRef) => {
+              const converted = convertCurrency(priceRef.price, 'USD', vcmCurrency);
+              return (
+                <button
+                  key={priceRef.name}
+                  onClick={() => setVcmValue(Number(converted.toFixed(4)))}
+                  className="px-2.5 py-1 rounded-full text-[11px] bg-white/10 text-white/80 hover:bg-white/20 transition-colors"
+                  title={`${priceRef.name} reference price`}
+                >
+                  {priceRef.name}: {vcmCurrency} {converted.toFixed(2)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <div className="text-xs text-white/60 uppercase tracking-wider mb-1">Potential Credits</div>

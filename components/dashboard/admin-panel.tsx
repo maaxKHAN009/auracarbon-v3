@@ -4,36 +4,9 @@ import React, { useState } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { useCarbonStore } from '@/lib/store';
 import { Save, Plus, Trash2, X } from 'lucide-react';
+import { COUNTRY_CURRENCY_MAP } from '@/lib/constants';
 
-// Supported currencies (matching credit-wallet)
-const SUPPORTED_CURRENCIES: Record<string, string> = {
-  'Germany': 'EUR',
-  'France': 'EUR',
-  'Italy': 'EUR',
-  'Spain': 'EUR',
-  'Netherlands': 'EUR',
-  'Belgium': 'EUR',
-  'Luxembourg': 'EUR',
-  'Austria': 'EUR',
-  'Poland': 'EUR',
-  'Czech Republic': 'CZK',
-  'Hungary': 'HUF',
-  'Romania': 'RON',
-  'Bulgaria': 'BGN',
-  'Croatia': 'HRK',
-  'Slovenia': 'EUR',
-  'Slovakia': 'EUR',
-  'United Kingdom': 'GBP',
-  'Ireland': 'EUR',
-  'United States': 'USD',
-  'Canada': 'CAD',
-  'Australia': 'AUD',
-  'Japan': 'JPY',
-  'China': 'CNY',
-  'India': 'INR',
-  'Brazil': 'BRL',
-  'Mexico': 'MXN',
-};
+const SUPPORTED_CURRENCIES: Record<string, string> = COUNTRY_CURRENCY_MAP;
 
 export function AdminPanel({ onClose }: { onClose: () => void }) {
   const { factors, updateFactors, vcmValue, vcmCurrency, setVcmValue, setVcmCurrency } = useCarbonStore();

@@ -3,53 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { TrendingUp, RefreshCw } from 'lucide-react';
-
-interface CarbonPrice {
-  name: string;
-  price: number;
-  range: string;
-  project_type: string;
-}
-
-// Market reference prices based on typical VCM market data
-const MARKET_PRICES: CarbonPrice[] = [
-  {
-    name: 'Verified Carbon Units (VCU)',
-    price: 5.50,
-    range: '$4.50 - $7.00',
-    project_type: 'Verified Emission Reductions'
-  },
-  {
-    name: 'Gold Standard (GS)',
-    price: 8.25,
-    range: '$7.50 - $12.00',
-    project_type: 'High-Impact Projects'
-  },
-  {
-    name: 'Nature-Based Solutions',
-    price: 6.75,
-    range: '$5.50 - $9.00',
-    project_type: 'Forestry & Conservation'
-  },
-  {
-    name: 'Renewable Energy Credits',
-    price: 4.80,
-    range: '$3.50 - $6.50',
-    project_type: 'Wind, Solar, Hydro'
-  },
-  {
-    name: 'Methane Reduction',
-    price: 9.50,
-    range: '$8.00 - $15.00',
-    project_type: 'Landfill & Agriculture'
-  },
-  {
-    name: 'Energy Efficiency Credits',
-    price: 5.20,
-    range: '$4.00 - $7.50',
-    project_type: 'Industrial Efficiency'
-  },
-];
+import { MARKET_PRICES, calculateAverageVcmPrice } from '@/lib/constants';
 
 export function CarbonPricesWidget() {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -63,7 +17,7 @@ export function CarbonPricesWidget() {
     }, 1000);
   };
 
-  const averagePrice = (MARKET_PRICES.reduce((sum, p) => sum + p.price, 0) / MARKET_PRICES.length).toFixed(2);
+  const averagePrice = calculateAverageVcmPrice().toFixed(2);
 
   return (
     <GlassCard className="w-full" delay={0.3}>
