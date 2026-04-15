@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { RecipeRow, useCarbonStore } from '@/lib/store';
 import { PROCESSES, UNITS } from '@/lib/constants';
-import { Plus, Trash2, Globe, Box, AlertCircle, Download } from 'lucide-react';
+import { Plus, Trash2, Globe, Box, AlertCircle, Download, Clipboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -209,7 +209,7 @@ async function buildRecipeXlsx(params: { country: string; totalProductOutput: nu
   });
 }
 
-function buildRecipeJson(params: { country: string; totalProductOutput: number; rows: RecipeRow[] }): Blob {
+function buildRecipeJsonText(params: { country: string; totalProductOutput: number; rows: RecipeRow[] }): string {
   const payload = {
     generatedAt: new Date().toISOString(),
     country: params.country,
@@ -223,7 +223,7 @@ function buildRecipeJson(params: { country: string; totalProductOutput: number; 
     })),
   };
 
-  return new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+  return JSON.stringify(payload, null, 2);
 }
 
 export function RecipeBuilder() {
@@ -244,7 +244,7 @@ export function RecipeBuilder() {
   } = useCarbonStore();
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingXlsx, setExportingXlsx] = useState(false);
-  const [exportingJson, setExportingJson] = useState(false);
+  const [copyingJson, setCopyingJson] = useState(false);
 
   useEffect(() => {
     fetchFactors();
@@ -305,22 +305,21 @@ export function RecipeBuilder() {
     }
   };
 
-  const handleRecipeJsonExport = async () => {
+  const handleRecipeJsonCopy = async () => {
     if (!canExportRecipe) return;
 
-    setExportingJson(true);
+    setCopyingJson(true);
     try {
       const validRows = rows.filter((row) => row.materialOrFuel && row.quantity > 0);
-      const jsonBlob = buildRecipeJson({
+      const jsonText = buildRecipeJsonText({
         country,
         totalProductOutput,
         rows: validRows,
       });
 
-      const stamp = new Date().toISOString().slice(0, 10);
-      downloadBlob(jsonBlob, `AuraCarbon-Recipe-Export-${stamp}.json`);
+      await navigator.clipboard.writeText(jsonText);
     } finally {
-      setExportingJson(false);
+      setCopyingJson(false);
     }
   };
 
@@ -349,12 +348,12 @@ export function RecipeBuilder() {
             <Download className="w-4 h-4" /> {exportingXlsx ? 'Preparing XLSX...' : 'Download Recipe XLSX'}
           </button>
           <button
-            onClick={handleRecipeJsonExport}
-            disabled={!canExportRecipe || exportingJson}
-            aria-label="Download recipe as JSON"
+            onClick={handleRecipeJsonCopy}
+            disabled={!canExportRecipe || copyingJson}
+            aria-label="Copy recipe JSON text"
             className="flex items-center gap-2 bg-[#FFCC00]/20 text-[#FFCC00] px-3 py-1.5 rounded-md hover:bg-[#FFCC00]/30 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="w-4 h-4" /> {exportingJson ? 'Preparing JSON...' : 'Download Recipe JSON'}
+            <Clipboard className="w-4 h-4" /> {copyingJson ? 'Copying JSON...' : 'Copy Recipe JSON'}
           </button>
           <button 
             onClick={addRow}
