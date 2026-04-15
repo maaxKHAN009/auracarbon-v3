@@ -1,11 +1,146 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { useCarbonStore } from '@/lib/store';
+import { RecipeRow, useCarbonStore } from '@/lib/store';
 import { PROCESSES, UNITS } from '@/lib/constants';
-import { Plus, Trash2, Globe, Box, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Globe, Box, AlertCircle, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildRecipePdf(params: {
+  country: string;
+  totalProductOutput: number;
+  rows: RecipeRow[];
+}): Blob {
+  const { country, totalProductOutput, rows } = params;
+
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const margin = 34;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const contentWidth = pageWidth - margin * 2;
+
+  const addFooter = () => {
+    const pageNum = doc.getCurrentPageInfo().pageNumber;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(140, 140, 140);
+    doc.text(`AuraCarbon v3 | Recipe Export | Generated: ${new Date().toISOString()}`, margin, pageHeight - 16);
+    doc.text(`Page ${pageNum}`, pageWidth - margin, pageHeight - 16, { align: 'right' });
+  };
+
+  const drawSectionTitle = (title: string, y: number, color: [number, number, number]) => {
+    doc.setFillColor(color[0], color[1], color[2]);
+    doc.roundedRect(margin, y, contentWidth, 24, 4, 4, 'F');
+    doc.setTextColor(18, 18, 18);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(title, margin + 10, y + 16);
+  };
+
+  doc.setFillColor(18, 18, 18);
+  doc.roundedRect(margin, margin, contentWidth, 78, 8, 8, 'F');
+  doc.setTextColor(0, 255, 136);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(17);
+  doc.text('Recipe Input Data Export', margin + 12, margin + 24);
+  doc.setFontSize(10);
+  doc.setTextColor(220, 220, 220);
+  doc.text(`Country Grid: ${country}`, margin + 12, margin + 42);
+  doc.text(`Total Product Output: ${totalProductOutput} tons`, margin + 12, margin + 56);
+  doc.text(`Recipe Rows: ${rows.length}`, margin + 12, margin + 70);
+
+  let y = margin + 92;
+
+  drawSectionTitle('Detailed Recipe Table', y, [0, 255, 136]);
+  y += 30;
+
+  autoTable(doc, {
+    startY: y,
+    theme: 'grid',
+    head: [[
+      '#',
+      'Material/Fuel',
+      'Process',
+      'Quantity',
+      'Unit'
+    ]],
+    body: rows.length
+      ? rows.map((row, index) => [
+          `${index + 1}`,
+          row.materialOrFuel,
+          row.process,
+          row.quantity.toFixed(3),
+          row.unit,
+        ])
+      : [['-', 'No valid recipe rows', '-', '-', '-']],
+    styles: {
+      fontSize: 9,
+      cellPadding: 4,
+      textColor: [230, 230, 230],
+      fillColor: [30, 30, 30],
+      overflow: 'linebreak'
+    },
+    headStyles: { fillColor: [0, 255, 136], textColor: [18, 18, 18], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [38, 38, 38] },
+    margin: { left: margin, right: margin },
+    columnStyles: {
+      0: { cellWidth: 24, halign: 'center' },
+      1: { cellWidth: 180 },
+      2: { cellWidth: 160 },
+      3: { cellWidth: 90, halign: 'right' },
+      4: { cellWidth: 80 },
+    },
+  });
+
+  addFooter();
+  return doc.output('blob');
+}
+
+function buildRecipeCsv(params: { country: string; totalProductOutput: number; rows: RecipeRow[] }): Blob {
+  const { country, totalProductOutput, rows } = params;
+  const header = ['Country Grid', 'Total Product Output (Tons)', 'Row #', 'Material/Fuel', 'Process', 'Quantity', 'Unit'];
+
+  const escapeCsv = (value: string | number) => {
+    const text = String(value ?? '');
+    if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+    return text;
+  };
+
+  const lines = [header.map(escapeCsv).join(',')];
+  rows.forEach((row, index) => {
+    lines.push(
+      [
+        country,
+        totalProductOutput,
+        index + 1,
+        row.materialOrFuel,
+        row.process,
+        row.quantity,
+        row.unit,
+      ]
+        .map(escapeCsv)
+        .join(',')
+    );
+  });
+
+  return new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+}
 
 export function RecipeBuilder() {
   const { 
@@ -23,6 +158,8 @@ export function RecipeBuilder() {
     error,
     clearError
   } = useCarbonStore();
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   useEffect(() => {
     fetchFactors();
@@ -43,6 +180,46 @@ export function RecipeBuilder() {
 
   if (!factors) return null;
 
+  const canExportRecipe = rows.some((row) => row.materialOrFuel && row.quantity > 0);
+
+  const handleRecipeExport = async () => {
+    if (!canExportRecipe) return;
+
+    setExportingPdf(true);
+    try {
+      const validRows = rows.filter((row) => row.materialOrFuel && row.quantity > 0);
+      const pdfBlob = buildRecipePdf({
+        country,
+        totalProductOutput,
+        rows: validRows,
+      });
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadBlob(pdfBlob, `AuraCarbon-Recipe-Export-${stamp}.pdf`);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleRecipeCsvExport = async () => {
+    if (!canExportRecipe) return;
+
+    setExportingCsv(true);
+    try {
+      const validRows = rows.filter((row) => row.materialOrFuel && row.quantity > 0);
+      const csvBlob = buildRecipeCsv({
+        country,
+        totalProductOutput,
+        rows: validRows,
+      });
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadBlob(csvBlob, `AuraCarbon-Recipe-Export-${stamp}.csv`);
+    } finally {
+      setExportingCsv(false);
+    }
+  };
+
   return (
     <GlassCard className="w-full flex flex-col gap-6" delay={0.1}>
       <div className="flex justify-between items-start">
@@ -50,13 +227,31 @@ export function RecipeBuilder() {
           <h3 className="text-lg font-display font-semibold text-white tracking-wider uppercase">Project Configuration</h3>
           <p className="text-xs text-white/40 mt-1">Industrial Recipe Builder</p>
         </div>
-        <button 
-          onClick={addRow}
-          aria-label="Add new material or fuel row"
-          className="flex items-center gap-2 bg-[#00FF88]/20 text-[#00FF88] px-3 py-1.5 rounded-md hover:bg-[#00FF88]/30 transition-colors text-sm font-medium"
-        >
-          <Plus className="w-4 h-4" /> Add Row
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRecipeExport}
+            disabled={!canExportRecipe || exportingPdf}
+            aria-label="Download full recipe as PDF"
+            className="flex items-center gap-2 bg-[#00CCFF]/20 text-[#00CCFF] px-3 py-1.5 rounded-md hover:bg-[#00CCFF]/30 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" /> {exportingPdf ? 'Preparing PDF...' : 'Download Recipe PDF'}
+          </button>
+          <button
+            onClick={handleRecipeCsvExport}
+            disabled={!canExportRecipe || exportingCsv}
+            aria-label="Download recipe as CSV"
+            className="flex items-center gap-2 bg-[#00FF88]/20 text-[#00FF88] px-3 py-1.5 rounded-md hover:bg-[#00FF88]/30 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" /> {exportingCsv ? 'Preparing CSV...' : 'Download Recipe CSV'}
+          </button>
+          <button 
+            onClick={addRow}
+            aria-label="Add new material or fuel row"
+            className="flex items-center gap-2 bg-[#00FF88]/20 text-[#00FF88] px-3 py-1.5 rounded-md hover:bg-[#00FF88]/30 transition-colors text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" /> Add Row
+          </button>
+        </div>
       </div>
 
       {/* Error notification */}

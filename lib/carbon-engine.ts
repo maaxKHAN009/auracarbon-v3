@@ -12,6 +12,21 @@ interface FactorResolution {
   scope: Scope;
 }
 
+export interface RowEmissionDetail {
+  rowId: string;
+  materialOrFuel: string;
+  process: RecipeRow['process'];
+  inputQuantity: number;
+  inputUnit: RecipeRow['unit'];
+  factorValue: number;
+  factorUnit: string;
+  normalizedQuantity: number | null;
+  scope: Scope;
+  emissionsKg: number;
+  status: 'ok' | 'skipped';
+  note?: string;
+}
+
 /** Unit conversion factors to standard base units */
 export const UNIT_CONVERSIONS: Record<string, Record<string, number>> = {
   'mass': {
@@ -283,4 +298,65 @@ export function calculateTotalEmissions(
     scope2: Math.round(scope2 * 100) / 100,
     scope3: Math.round(scope3 * 100) / 100,
   };
+}
+
+export function calculateRowEmissionDetails(
+  rows: RecipeRow[],
+  factors: FactorsData,
+  country: string
+): RowEmissionDetail[] {
+  return rows
+    .filter((row) => row.materialOrFuel && row.quantity > 0)
+    .map((row) => {
+      const resolution = resolveFactor(row, factors, country);
+      if (!resolution) {
+        return {
+          rowId: row.id,
+          materialOrFuel: row.materialOrFuel,
+          process: row.process,
+          inputQuantity: row.quantity,
+          inputUnit: row.unit,
+          factorValue: 0,
+          factorUnit: 'N/A',
+          normalizedQuantity: null,
+          scope: 'Scope 3',
+          emissionsKg: 0,
+          status: 'skipped',
+          note: 'No factor resolved for this process/material combination',
+        } as RowEmissionDetail;
+      }
+
+      const normalizedQty = normalizeActivityToFactorUnit(row.quantity, row.unit, resolution.factorUnit);
+      if (normalizedQty === null) {
+        return {
+          rowId: row.id,
+          materialOrFuel: row.materialOrFuel,
+          process: row.process,
+          inputQuantity: row.quantity,
+          inputUnit: row.unit,
+          factorValue: resolution.ef,
+          factorUnit: resolution.factorUnit,
+          normalizedQuantity: null,
+          scope: resolution.scope,
+          emissionsKg: 0,
+          status: 'skipped',
+          note: `Unit mismatch: ${row.unit} cannot convert to ${resolution.factorUnit}`,
+        } as RowEmissionDetail;
+      }
+
+      const emissions = Math.max(0, calculateEmissions(normalizedQty, resolution.ef, 1));
+      return {
+        rowId: row.id,
+        materialOrFuel: row.materialOrFuel,
+        process: row.process,
+        inputQuantity: row.quantity,
+        inputUnit: row.unit,
+        factorValue: resolution.ef,
+        factorUnit: resolution.factorUnit,
+        normalizedQuantity: normalizedQty,
+        scope: resolution.scope,
+        emissionsKg: emissions,
+        status: 'ok',
+      } as RowEmissionDetail;
+    });
 }
