@@ -110,36 +110,120 @@ function buildRecipePdf(params: {
   return doc.output('blob');
 }
 
-function buildRecipeCsv(params: { country: string; totalProductOutput: number; rows: RecipeRow[] }): Blob {
+async function buildRecipeXlsx(params: { country: string; totalProductOutput: number; rows: RecipeRow[] }): Promise<Blob> {
   const { country, totalProductOutput, rows } = params;
-  const header = ['Country Grid', 'Total Product Output (Tons)', 'Row #', 'Material/Fuel', 'Process', 'Quantity', 'Unit'];
+  const ExcelJS = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Recipe');
 
-  const escapeCsv = (value: string | number) => {
-    const text = String(value ?? '');
-    if (text.includes(',') || text.includes('"') || text.includes('\n')) {
-      return `"${text.replace(/"/g, '""')}"`;
-    }
-    return text;
-  };
+  const blackFont = { color: { argb: 'FF000000' } };
 
-  const lines = [header.map(escapeCsv).join(',')];
-  rows.forEach((row, index) => {
-    lines.push(
-      [
-        country,
-        totalProductOutput,
-        index + 1,
-        row.materialOrFuel,
-        row.process,
-        row.quantity,
-        row.unit,
-      ]
-        .map(escapeCsv)
-        .join(',')
-    );
+  worksheet.addRow(['AuraCarbon Recipe Export']);
+  worksheet.mergeCells('A1:G1');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.font = { ...blackFont, bold: true, size: 14 };
+  titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE6FAFF' } };
+
+  worksheet.addRow([]);
+  worksheet.addRow(['Country Grid', country, 'Total Product Output (Tons)', totalProductOutput, 'Generated At', new Date().toISOString(), '']);
+  worksheet.mergeCells('B3:C3');
+  worksheet.mergeCells('D3:E3');
+  worksheet.mergeCells('F3:G3');
+
+  const metadataRow = worksheet.getRow(3);
+  metadataRow.eachCell((cell: any) => {
+    cell.font = { ...blackFont, bold: true };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5FFF2' } };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+      left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+      bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+      right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+    };
   });
 
-  return new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  worksheet.addRow([]);
+  worksheet.addRow(['Row #', 'Material/Fuel', 'Process', 'Quantity', 'Unit', 'Country Grid', 'Total Product Output (Tons)']);
+  const headerRow = worksheet.getRow(5);
+  headerRow.eachCell((cell: any) => {
+    cell.font = { ...blackFont, bold: true };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCFFF7' } };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFB8B8B8' } },
+      left: { style: 'thin', color: { argb: 'FFB8B8B8' } },
+      bottom: { style: 'thin', color: { argb: 'FFB8B8B8' } },
+      right: { style: 'thin', color: { argb: 'FFB8B8B8' } },
+    };
+  });
+
+  rows.forEach((row, index) => {
+    const dataRow = worksheet.addRow([
+      index + 1,
+      row.materialOrFuel,
+      row.process,
+      Number(row.quantity.toFixed(3)),
+      row.unit,
+      country,
+      totalProductOutput,
+    ]);
+
+    dataRow.eachCell((cell: any) => {
+      cell.font = { ...blackFont };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: index % 2 === 0 ? 'FFF9FDFF' : 'FFF7FFF9' },
+      };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        right: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+      };
+    });
+
+    // Approximate auto-fit row height when wrapped text is present.
+    const rowValues = Array.isArray(dataRow.values) ? dataRow.values.slice(1) : [];
+    const textLengths = rowValues.map((v: unknown) => String(v ?? '').length);
+    const maxLen = Math.max(0, ...textLengths);
+    dataRow.height = Math.max(20, Math.min(72, 18 + Math.ceil(maxLen / 24) * 10));
+  });
+
+  // Auto-fit columns by max content length.
+  worksheet.columns.forEach((column: any) => {
+    const values = column.values ?? [];
+    const maxLength = values.reduce((acc: number, value: unknown) => {
+      const text = String(value ?? '');
+      return Math.max(acc, text.length);
+    }, 10);
+    column.width = Math.min(40, Math.max(12, maxLength + 2));
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+}
+
+function buildRecipeJson(params: { country: string; totalProductOutput: number; rows: RecipeRow[] }): Blob {
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    country: params.country,
+    totalProductOutputTons: params.totalProductOutput,
+    recipeRows: params.rows.map((row, index) => ({
+      rowNumber: index + 1,
+      materialOrFuel: row.materialOrFuel,
+      process: row.process,
+      quantity: Number(row.quantity.toFixed(3)),
+      unit: row.unit,
+    })),
+  };
+
+  return new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
 }
 
 export function RecipeBuilder() {
@@ -159,7 +243,8 @@ export function RecipeBuilder() {
     clearError
   } = useCarbonStore();
   const [exportingPdf, setExportingPdf] = useState(false);
-  const [exportingCsv, setExportingCsv] = useState(false);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
+  const [exportingJson, setExportingJson] = useState(false);
 
   useEffect(() => {
     fetchFactors();
@@ -201,22 +286,41 @@ export function RecipeBuilder() {
     }
   };
 
-  const handleRecipeCsvExport = async () => {
+  const handleRecipeXlsxExport = async () => {
     if (!canExportRecipe) return;
 
-    setExportingCsv(true);
+    setExportingXlsx(true);
     try {
       const validRows = rows.filter((row) => row.materialOrFuel && row.quantity > 0);
-      const csvBlob = buildRecipeCsv({
+      const xlsxBlob = await buildRecipeXlsx({
         country,
         totalProductOutput,
         rows: validRows,
       });
 
       const stamp = new Date().toISOString().slice(0, 10);
-      downloadBlob(csvBlob, `AuraCarbon-Recipe-Export-${stamp}.csv`);
+      downloadBlob(xlsxBlob, `AuraCarbon-Recipe-Export-${stamp}.xlsx`);
     } finally {
-      setExportingCsv(false);
+      setExportingXlsx(false);
+    }
+  };
+
+  const handleRecipeJsonExport = async () => {
+    if (!canExportRecipe) return;
+
+    setExportingJson(true);
+    try {
+      const validRows = rows.filter((row) => row.materialOrFuel && row.quantity > 0);
+      const jsonBlob = buildRecipeJson({
+        country,
+        totalProductOutput,
+        rows: validRows,
+      });
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadBlob(jsonBlob, `AuraCarbon-Recipe-Export-${stamp}.json`);
+    } finally {
+      setExportingJson(false);
     }
   };
 
@@ -237,12 +341,20 @@ export function RecipeBuilder() {
             <Download className="w-4 h-4" /> {exportingPdf ? 'Preparing PDF...' : 'Download Recipe PDF'}
           </button>
           <button
-            onClick={handleRecipeCsvExport}
-            disabled={!canExportRecipe || exportingCsv}
-            aria-label="Download recipe as CSV"
+            onClick={handleRecipeXlsxExport}
+            disabled={!canExportRecipe || exportingXlsx}
+            aria-label="Download recipe as XLSX"
             className="flex items-center gap-2 bg-[#00FF88]/20 text-[#00FF88] px-3 py-1.5 rounded-md hover:bg-[#00FF88]/30 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="w-4 h-4" /> {exportingCsv ? 'Preparing CSV...' : 'Download Recipe CSV'}
+            <Download className="w-4 h-4" /> {exportingXlsx ? 'Preparing XLSX...' : 'Download Recipe XLSX'}
+          </button>
+          <button
+            onClick={handleRecipeJsonExport}
+            disabled={!canExportRecipe || exportingJson}
+            aria-label="Download recipe as JSON"
+            className="flex items-center gap-2 bg-[#FFCC00]/20 text-[#FFCC00] px-3 py-1.5 rounded-md hover:bg-[#FFCC00]/30 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" /> {exportingJson ? 'Preparing JSON...' : 'Download Recipe JSON'}
           </button>
           <button 
             onClick={addRow}
