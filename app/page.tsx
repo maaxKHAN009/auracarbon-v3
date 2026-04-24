@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout';
 import { LoginForm } from '@/components/auth/login-form';
 import { RegistrationForm } from '@/components/auth/registration-form';
-import { AdminSetupForm } from '@/components/auth/admin-setup-form';
 import { useCarbonStore } from '@/lib/store';
 
 const AUTH_STORAGE_KEY = 'auracarbon_auth_session';
@@ -30,7 +29,6 @@ export default function Home() {
   const [userId, setUserId] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [showRegister, setShowRegister] = useState(false);
-  const [showAdminSetup, setShowAdminSetup] = useState(false);
   const [authResolved, setAuthResolved] = useState(false);
 
   useEffect(() => {
@@ -110,10 +108,6 @@ export default function Home() {
     setShowRegister(false);
   };
 
-  if (showAdminSetup) {
-    return <AdminSetupForm />;
-  }
-
   if (!authResolved) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white/60 text-sm">
@@ -136,7 +130,6 @@ export default function Home() {
       <LoginForm
         onLogin={handleLogin}
         onSwitchToRegister={() => setShowRegister(true)}
-        onAdminSetup={() => setShowAdminSetup(true)}
       />
     );
   }

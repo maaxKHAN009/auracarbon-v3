@@ -10,10 +10,9 @@ import TwoFALoginForm from './two-fa-login-form';
 interface LoginFormProps {
   onLogin: (role: 'client' | 'admin', userId?: string, userEmail?: string) => void;
   onSwitchToRegister?: () => void;
-  onAdminSetup?: () => void;
 }
 
-export function LoginForm({ onLogin, onSwitchToRegister, onAdminSetup }: LoginFormProps) {
+export function LoginForm({ onLogin, onSwitchToRegister }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -172,19 +171,7 @@ export function LoginForm({ onLogin, onSwitchToRegister, onAdminSetup }: LoginFo
             </button>
           </p>
           <p className="border-t border-white/10 pt-3">
-            {onAdminSetup && (
-              <>
-                First time? <br />
-                <button
-                  onClick={onAdminSetup}
-                  className="text-[#FFCC00] hover:text-[#FFCC00]/80 transition-colors font-medium"
-                >
-                  Setup Admin Account
-                </button>
-                <br />
-              </>
-            )}
-            Hackathon Demo Access (instant login): <br />
+            Demo Access (instant login): <br />
             Email: <code className="text-[#00FF88]">demo@auracarbon.ai</code> <br />
             Password: <code className="text-[#00FF88]">AuraDemo2026!</code>
           </p>
